@@ -35,12 +35,14 @@
   };
   PP.AVORDER = ['boy', 'boy2', 'boy3', 'girl', 'girl2', 'girl3', 'hijab', 'hijab2', 'hijab3'];
   PP.AV_GURU = {
-    guru0: { name: 'Pak Ahmad', idle: 'guru_laki_0', walk: ['guru_laki_0', 'guru_laki_1'] },
-    guru1: { name: 'Pak Bima',  idle: 'guru_laki_1', walk: ['guru_laki_1', 'guru_laki_0'] },
-    guru2: { name: 'Bu Kartini',idle: 'guru_cewek_0', walk: ['guru_cewek_0', 'guru_cewek_1'] },
-    guru3: { name: 'Bu Fatimah',idle: 'guru_cewek_1', walk: ['guru_cewek_1', 'guru_cewek_0'] }
+    guru0: { name: 'Pak Ahmad',  idle: 'guru_laki_0',      walk: ['guru_laki_0',      'guru_laki_1']      },
+    guru1: { name: 'Pak Bima',   idle: 'guru_laki_1',      walk: ['guru_laki_1',      'guru_laki_0']      },
+    guru2: { name: 'Bu Kartini', idle: 'guru_cewek_0',     walk: ['guru_cewek_0',     'guru_cewek_1']     },
+    guru3: { name: 'Bu Fatimah', idle: 'guru_cewek_1',     walk: ['guru_cewek_1',     'guru_cewek_0']     },
+    guru4: { name: 'Pak Guru',   idle: 'guru_laki_kaca_0', walk: ['guru_laki_kaca_0', 'guru_laki_kaca_1'] },
+    guru5: { name: 'Bu Guru',    idle: 'guru_cewek_kaca_0',walk: ['guru_cewek_kaca_0','guru_cewek_kaca_1']}
   };
-  PP.GURU_ORDER = ['guru0', 'guru1', 'guru2', 'guru3'];
+  PP.GURU_ORDER = ['guru0', 'guru1', 'guru2', 'guru3', 'guru4', 'guru5'];
   PP.registered = () => !!(S.data.registered && S.data.name && S.data.kelas && S.data.sekolah && (PP.AV[S.data.avatar] || PP.AV_GURU[S.data.avatar]));
   PP.me = () => PP.AV[S.data.avatar] || PP.AV_GURU[S.data.avatar] || PP.AV.boy;
   PP.nm = () => S.data.name || 'Petualang';
@@ -413,11 +415,21 @@
       </div></div>`);
     PP.$('#exitYes').onclick = () => {
       PP.ui.close();
-      // Kembali ke splash dan clear state runtime
-      PP.ctx.isGuru = false;
-      PP.go('splash');
-      // Jika bisa tutup window (PWA/standalone), coba
-      try { if (window.navigator && navigator.standalone) window.close(); } catch(e) {}
+      // Coba tutup tab/window browser
+      try {
+        window.close();
+        // Jika window.close() tidak bekerja (tab yang tidak dibuka via script),
+        // arahkan ke halaman blank atau kembali ke splash
+        setTimeout(() => {
+          try { history.go(-(history.length)); } catch(e2) {}
+          // Fallback: kembali ke splash
+          PP.ctx.isGuru = false;
+          PP.go('splash');
+        }, 300);
+      } catch(e) {
+        PP.ctx.isGuru = false;
+        PP.go('splash');
+      }
     };
   };
 
@@ -700,6 +712,16 @@
     render();
     refreshAudioUi();
   }
-  let _errT = 0; window.addEventListener('error', e => { try { if (!e.error && !e.message) return; console.warn('[PP error]', e.message, e.filename, e.lineno); const n = Date.now(); if (n - _errT < 4000) return; _errT = n; PP.ui.toast('Terjadi kesalahan kecil. Coba lagi.', 'x'); } catch (_) {} });
+  let _errT = 0; window.addEventListener('error', e => { try {
+    if (!e.error && !e.message) return;
+    // Abaikan error resource (gambar/audio/video tidak load) — bukan error JS kritis
+    if (e.target && e.target !== window && (e.target.tagName === 'IMG' || e.target.tagName === 'AUDIO' || e.target.tagName === 'VIDEO' || e.target.tagName === 'SOURCE')) return;
+    // Abaikan error jaringan / CORS yang tidak fatal
+    const msg = (e.message || '').toLowerCase();
+    if (!e.error || msg.includes('script error') || msg.includes('network') || msg.includes('fetch') || msg.includes('load')) return;
+    console.warn('[PP error]', e.message, e.filename, e.lineno);
+    const n = Date.now(); if (n - _errT < 8000) return; _errT = n;
+    PP.ui.toast('Terjadi kesalahan kecil. Coba lagi.', 'x');
+  } catch (_) {} }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
