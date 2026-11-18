@@ -101,9 +101,15 @@
   /* =====================================================
      REFLEKSI
      ===================================================== */
-  const RQ = ['Apa yang kamu temukan tentang hubungan luas persegi pada sisi-sisi segitiga siku-siku?', 'Apa yang kamu pelajari dari asal usul Teorema Pythagoras dan mengapa ilmu ini dikaji?', 'Bagian mana yang masih sulit, misalnya mencari sisi miring atau sisi siku-siku?', 'Di mana kamu bisa memakai Teorema Pythagoras dalam kehidupan sehari-hari? Beri satu contoh.'];
+  const RQ = [
+    '😊 Apakah kamu senang belajar matematika terutama Pythagoras hari ini? Ceritakan perasaanmu!',
+    '🔍 Apa yang kamu temukan tentang hubungan luas persegi pada sisi-sisi segitiga siku-siku?',
+    '📖 Apa yang kamu pelajari dari asal usul Teorema Pythagoras dan mengapa ilmu ini dikaji?',
+    '🤔 Bagian mana yang masih sulit, misalnya mencari sisi miring atau sisi siku-siku?',
+    '🌍 Di mana kamu bisa memakai Teorema Pythagoras dalam kehidupan sehari-hari? Beri satu contoh.'
+  ];
   PP.screens.refleksi = function () {
-    const r = S.data.reflection || { a: ['', '', '', ''], date: 0 };
+    const r = S.data.reflection || { a: ['', '', '', '', ''], date: 0 };
     return {
       html: `<div class="wrap narrow"><div class="panel fill pad"><h2 class="h-title">Refleksi Pembelajaran</h2>
         <p class="small" style="margin:0 0 4px">Ceritakan dengan kata-katamu sendiri. Tidak ada jawaban yang salah di sini.</p>
