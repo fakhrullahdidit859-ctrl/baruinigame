@@ -53,10 +53,14 @@
     nusa_batik_0: ['nusa_batik_1', 'nusa_batik_0', 'nusa_batik_2', 'nusa_batik_0'],
     nusa_hijab_0: ['nusa_hijab_1', 'nusa_hijab_0'],
     // Karakter guru baru
-    guru_laki_0: ['guru_laki_1', 'guru_laki_0'],
-    guru_laki_1: ['guru_laki_0', 'guru_laki_1'],
-    guru_cewek_0: ['guru_cewek_1', 'guru_cewek_0'],
-    guru_cewek_1: ['guru_cewek_0', 'guru_cewek_1'] };
+    guru_laki_0:      ['guru_laki_1',      'guru_laki_0'      ],
+    guru_laki_1:      ['guru_laki_0',      'guru_laki_1'      ],
+    guru_cewek_0:     ['guru_cewek_1',     'guru_cewek_0'     ],
+    guru_cewek_1:     ['guru_cewek_0',     'guru_cewek_1'     ],
+    guru_laki_kaca_0: ['guru_laki_kaca_1', 'guru_laki_kaca_0' ],
+    guru_laki_kaca_1: ['guru_laki_kaca_0', 'guru_laki_kaca_1' ],
+    guru_cewek_kaca_0:['guru_cewek_kaca_1','guru_cewek_kaca_0'],
+    guru_cewek_kaca_1:['guru_cewek_kaca_0','guru_cewek_kaca_1'] };
   const OWLF = ['owl_0', 'owl_1', 'owl_2', 'owl_1'];
   const ITEMS = [{ id: 'crown', name: 'Mahkota', price: 40, img: 'crown' }, { id: 'owl', name: 'Burung Hantu', price: 60, img: 'owl_0' }, { id: 'spark', name: 'Jejak Bintang', price: 30, img: 'sparkles' }];
   const REWARD = { Mudah: [8, 4], Sedang: [12, 6], Sulit: [18, 9], Tantangan: [14, 7] };
@@ -84,6 +88,7 @@
   const ALL = ['new/tree_a', 'new/pine', 'new/bush_b', 'new/cottage', 'new/m_barn', 'new/market', 'new/well', 'new/mosque', 'new/windmill', 'new/sign', 'new/lamp', 'new/flowers', 'new/m_coin', 'school', 'castle', 'portal', 'crown', 'sparkles', 'rock_a', 'owl_0', 'owl_1', 'owl_2', 'boy_5', 'boy_6', 'girl_3', 'hijab_2',
     'boy_0', 'boy_1', 'boy_2', 'boy_3', 'boy_4', 'girl_0', 'girl_1', 'girl_2', 'hijab_0', 'hijab_1', 'teacher_0', 'teacher_1', 'teacher_2', 'teacher_3',
     'guru_laki_0', 'guru_laki_1', 'guru_cewek_0', 'guru_cewek_1',
+    'guru_laki_kaca_0', 'guru_laki_kaca_1', 'guru_cewek_kaca_0', 'guru_cewek_kaca_1',
     // Karakter & Aset Nusantara
     'nusa_laki_0', 'nusa_laki_1', 'nusa_laki_2', 'nusa_cewek_0', 'nusa_cewek_1',
     'nusa_batik_0', 'nusa_batik_1', 'nusa_batik_2', 'nusa_hijab_0', 'nusa_hijab_1',
