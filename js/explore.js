@@ -74,7 +74,7 @@
   const E = () => S.data.explore;
   const ids = wi => WORLDS[wi].q.concat(WORLDS[wi].extra || []);
   const solvedIn = wi => ids(wi).filter(i => E().solved[i]).length;
-  function unlocked(wi) { const w = WORLDS[wi]; return wi === 0 || (w.after != null ? !!E().done[w.after] : w.link != null ? unlocked(w.link) : !!E().done[wi - 1]); }
+  function unlocked(wi) { return true; } // semua dunia terbuka
 
   function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -310,7 +310,7 @@
           if (t.type === 'shape') { openShape(t.sh); return; }
           if (t.type === 'studi') { openStudi(t.st); return; }
           const to = t.p.to;
-          if (!unlocked(to)) { A.sfx('tick'); say(`Portal terkunci. Selesaikan misi di ${D.short} dulu (${solvedIn(wi)}/${D.q.length}).`); return; }
+          // semua portal terbuka
           ex.w = to; ex.pos = t.p.at ? { w: to, x: t.p.at[0], y: t.p.at[1] } : null; S.save(); PP.go('jelajah');
         }
 
