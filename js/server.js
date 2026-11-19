@@ -129,7 +129,7 @@
   /* pemain lain di dunia w (untuk digambar) */
   P.nearby = w => Object.keys(players).filter(id => id !== myId && alive(players[id]) && players[id].loc && players[id].loc.w === w).map(id => Object.assign({ id }, players[id]));
   const imgCache = {};
-  P.img = key => { const av = (window.PP && PP.AV[key]) || (PP.AV && PP.AV.boy), n = av ? av.idle : 'boy_0'; if (!imgCache[n]) { const i = new Image(); i.src = 'assets/img/' + n + '.png'; imgCache[n] = i; } return { img: imgCache[n], name: n }; };
+  P.img = key => { const av = (window.PP && (PP.AV[key] || PP.AV_GURU[key])) || (PP.AV && PP.AV.boy), n = av ? av.idle : 'boy_0'; if (!imgCache[n]) { const i = new Image(); i.src = 'assets/img/' + n + '.png'; imgCache[n] = i; } return { img: imgCache[n], name: n }; };
 
   function profile() {
     const d = S().data, o = { name: clean(d.name).slice(0, 40) || 'Pemain', kelas: clean(d.kelas).slice(0, 20), sekolah: clean(d.sekolah).slice(0, 60), avatar: d.avatar || 'boy', xp: d.xp | 0, level: S().level(), stars: S().totalStars(), coins: (d.explore && d.explore.coins) | 0, final: S().finalScore(), pos: S().doneCount(), online: true, updated: Date.now() };
