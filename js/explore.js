@@ -416,7 +416,7 @@
         /* ---- server bersama: jumlah pemain, daftar, kabar masuk/keluar ---- */
         const SV = window.PPServer;
         const svCount = () => { try { $('xOnN').textContent = SV ? Math.max(1, SV.count()) : 1; } catch (e) {} };
-        const svList = () => `<h2 class="h-title">Pemain Online</h2><p class="small muted" style="margin:0 0 4px">Server: <b>${PP.esc(SV ? SV.room() : '-')}</b> · mesin: ${SV ? SV.mode() : 'off'}</p><ol class="sv-list">${(SV ? SV.list() : []).map(p => `<li class="${p.me ? 'me' : ''}"><span class="sv-av">${PP.img((PP.AV[p.avatar] || PP.AV.boy).idle)}</span><span class="sv-n"><b>${PP.esc(p.name || 'Pemain')}${p.me ? ' (kamu)' : ''}</b><small>${PP.esc([p.kelas, p.sekolah].filter(Boolean).join(' · ')) || '-'}</small></span><span class="sv-xp">${p.xp | 0} XP<small>${p.scene === 'jelajah' ? 'menjelajah' : p.scene === 'kuis' ? 'kuis' : 'menu'}</small></span></li>`).join('')}</ol><div class="row center"><button class="btn green" data-close>Tutup</button></div>`;
+        const svList = () => `<h2 class="h-title">Pemain Online</h2><p class="small muted" style="margin:0 0 4px">Server: <b>${PP.esc(SV ? SV.room() : '-')}</b> · mesin: ${SV ? SV.mode() : 'off'}</p><ol class="sv-list">${(SV ? SV.list() : []).map(p => `<li class="${p.me ? 'me' : ''}"><span class="sv-av">${PP.img((PP.AV[p.avatar] || PP.AV_GURU[p.avatar] || PP.AV.boy).idle)}</span><span class="sv-n"><b>${PP.esc(p.name || 'Pemain')}${p.me ? ' (kamu)' : ''}</b><small>${PP.esc([p.kelas, p.sekolah].filter(Boolean).join(' · ')) || '-'}</small></span><span class="sv-xp">${p.xp | 0} XP<small>${p.scene === 'jelajah' ? 'menjelajah' : p.scene === 'kuis' ? 'kuis' : 'menu'}</small></span></li>`).join('')}</ol><div class="row center"><button class="btn green" data-close>Tutup</button></div>`;
         $('xOn').onclick = () => { if (!busy) PP.ui.modal(svList()); };
         if (SV) { svCount(); cleanup.push(SV.onChange(svCount));
           cleanup.push(SV.onJoin((id, p) => { if (alive) PP.ui.toast((p.name || 'Teman') + ' bergabung ke server'); }));
@@ -571,7 +571,7 @@
         }
 
         /* --- mulai --- */
-        const names = Array.from(new Set(ALL.concat(WORLDS[wi].build.map(b => b[0]), WORLDS[wi].trees, Object.values(PP.AV).reduce((r, v) => r.concat(v.idle, v.walk || []), []))));
+        const names = Array.from(new Set(ALL.concat(WORLDS[wi].build.map(b => b[0]), WORLDS[wi].trees, Object.values(PP.AV).reduce((r, v) => r.concat(v.idle, v.walk || []), []), Object.values(PP.AV_GURU || {}).reduce((r, v) => r.concat(v.idle, v.walk || []), []))));
         Promise.all(names.map(n => load(n).then(i => { imgs[n] = i; })).concat(D.kind === 'zipcity' ? [PP.Kota.load()] : D.kind === 'sea' || D.kind === 'under' ? [PP.Laut.load()] : [])).then(() => {
           if (!alive) return;
           world = buildWorld(wi, imgs); $('xLoad').remove(); if (window.PPBuat) addCustom(PPBuat.approved());
