@@ -252,6 +252,7 @@
   PP.screens.splash = function () {
     const me = PP.me();
     const has = S.doneCount() > 0 || S.data.name;
+    const roomVal = PPNet.configured() ? (PPNet.room() || PPNet.fromUrl() || '') : '';
     return {
       html: `<div class="splash">
         <div class="sp-bg"></div>
@@ -266,32 +267,122 @@
         <div class="sp-deco d-f1">${PP.deco.flower()}</div><div class="sp-deco d-f2">${PP.deco.flower('#ffd34d')}</div><div class="sp-deco d-f3">${PP.deco.flower('#8ec5ff')}</div>
         <div class="sp-deco d-char d-teacher">${PP.img('guru_cewek_0', 'bob')}</div>
         <div class="sp-deco d-char d-player">${PP.img(me.idle, 'bob b2', 'Karakter pemain')}</div>
-        <div class="sparks">${Array.from({ length: 12 }, (_, i) => `<i style="left:${(i * 73) % 100}%;animation-delay:${(i * 0.37) % 4}s"></i>`).join('')}</div>
+        <div class="sparks">${Array.from({ length: 16 }, (_, i) => `<i style="left:${(i * 73) % 100}%;animation-delay:${(i * 0.27) % 4}s"></i>`).join('')}</div>
         <div class="sp-owl">${PP.img('owl_0', '', 'Burung hantu pemandu')}</div>
         <div class="sp-main">
           <h1 class="sp-logo"><span class="sr-only">Petualangan Pythagoras</span>${PP.img('logo', 'logo-img float', 'Petualangan Pythagoras')}</h1>
           <p class="sp-sub">Matematika SMP/MTs · Teorema Pythagoras</p>
           <div class="speech" id="spSpeech">Halo, petualang matematika!</div>
+          ${PPNet.configured() ? `<div class="sp-room-box">
+            <label class="sp-room-label">🏫 Kode Ruang Kelas</label>
+            <div class="sp-room-row">
+              <input id="spRoomInput" class="sp-room-input" maxlength="10" value="${PP.esc(roomVal)}" placeholder="Masukkan kode dari guru" autocapitalize="characters" spellcheck="false">
+              <button class="btn green sm nosfx" id="spRoomSave">✓ Simpan</button>
+            </div>
+            <p class="sp-room-hint">Minta kode kepada gurumu. Tanpa kode, kamu masuk ke server umum.</p>
+          </div>` : ''}
           <div class="sp-btns">
             <button class="btn xl green pulse" data-act="start"><span class="tri">▶</span> MULAI PETUALANGAN</button>
             <div class="sp-mini">
-              <button class="btn blue" data-go="petunjuk"><img class="bi" src="assets/img/new/m_book.png" alt=""> Petunjuk</button>
+              <button class="btn blue" data-act="show-panduan">📖 Panduan</button>
               <button class="btn purple" data-go="profil"><img class="bi" src="assets/img/new/m_bag.png" alt=""> Profil</button>
               <button class="btn gold" data-go="nilai"><img class="bi" src="assets/img/new/ic_trophy.png" alt=""> Prestasi</button>
+              <button class="btn teal" data-act="show-online">👥 Pemain Online</button>
               <button class="btn red" data-act="audio-toggle"><img class="bi" src="assets/img/new/ic_gear.png" alt=""> Suara</button>
             </div>
             <button class="btn sp-exit" data-act="exit-game">✕ Keluar Game</button>
           </div>
         </div>
-        ${has ? `<p class="sp-hello">Selamat datang kembali, <b>${PP.esc(PP.nm())}</b>! Progres tersimpan di perangkat ini.</p>` : ''}
+        ${has ? `<p class="sp-hello">Selamat datang kembali, <b>${PP.esc(PP.nm())}</b>! 🎯 Progres: ${S.doneCount()}/6 pos · ${S.totalStars()} ⭐</p>` : ''}
+        <div class="sp-watermark">Made by Didit Fakhrullah</div>
       </div>`,
       mount(root) {
         const owl = PP.$('.sp-owl img', root); let i = 0; const fr = ['owl_0', 'owl_1', 'owl_2', 'owl_1'];
         const t1 = setInterval(() => { i = (i + 1) % fr.length; owl.src = `assets/img/${fr[i]}.png`; }, 420);
-        const lines = ['Halo, petualang matematika!', 'Ayo kita temukan rahasia Pythagoras!', 'Siap menjelajah enam pos misi?', 'Jangan menyerah, kamu pasti bisa!'];
+        const lines = ['Halo, petualang matematika! 👋', 'Ayo kita temukan rahasia Pythagoras! 📐', 'Siap menjelajah semua dunia? 🗺️', 'Jawab soal, kumpulkan bintang! ⭐', 'Jangan menyerah, kamu pasti bisa! 💪'];
         let k = 0; const sp = PP.$('#spSpeech', root);
-        const t2 = setInterval(() => { k = (k + 1) % lines.length; sp.textContent = lines[k]; }, 3600);
+        const t2 = setInterval(() => { k = (k + 1) % lines.length; sp.textContent = lines[k]; }, 3200);
         this._t = [t1, t2];
+        // Tombol simpan kode ruang
+        const roomSave = PP.$('#spRoomSave', root);
+        if (roomSave) {
+          roomSave.onclick = () => {
+            const inp = PP.$('#spRoomInput', root);
+            const rc = PPNet.normRoom(inp.value);
+            if (rc && !PPNet.validRoom(rc)) { PP.ui.toast('Kode ruangan harus 3–10 huruf/angka.', 'x'); inp.focus(); return; }
+            if (rc) { PPNet.setRoom(rc); PP.ui.toast('Kode ruang "' + rc + '" tersimpan! 🏫'); }
+            else { PPNet.setRoom(PPNet.defaultRoom()); PP.ui.toast('Masuk ke server umum.'); }
+            try { window.PPServer && PPServer.join(); } catch (x) {}
+          };
+          const inp = PP.$('#spRoomInput', root);
+          if (inp) inp.addEventListener('input', e => { e.target.value = PPNet.normRoom(e.target.value); });
+        }
+        // Tombol panduan
+        PP.acts['show-panduan'] = () => {
+          PP.ui.modal(`<div class="panduan-modal">
+            <h2 class="h-title">📖 Panduan Lengkap</h2>
+            <div class="pd-tabs">
+              <button class="pd-tab active" data-tab="cara">Cara Main</button>
+              <button class="pd-tab" data-tab="peta">Peta &amp; Pos</button>
+              <button class="pd-tab" data-tab="jelajah">Jelajah Dunia</button>
+              <button class="pd-tab" data-tab="online">Mode Online</button>
+            </div>
+            <div class="pd-body">
+              <div class="pd-panel active" id="pdCara">
+                <div class="pd-step"><span class="pd-num">1</span><div><b>Daftar Dulu</b><p>Klik <b>MULAI PETUALANGAN</b> → pilih <b>Siswa</b> → isi nama, kelas, sekolah, dan pilih karakter favoritmu.</p></div></div>
+                <div class="pd-step"><span class="pd-num">2</span><div><b>Buka Peta</b><p>Setelah masuk, buka menu <b>Peta</b>. Ada 6 pos misi yang bisa dikerjakan. Semua pos sudah terbuka untuk dijelajahi!</p></div></div>
+                <div class="pd-step"><span class="pd-num">3</span><div><b>Pelajari Materi</b><p>Di setiap pos ada tab <b>Materi</b>. Baca penjelasan Teorema Pythagoras beserta gambar interaktifnya.</p></div></div>
+                <div class="pd-step"><span class="pd-num">4</span><div><b>Jawab Tantangan</b><p>Klik <b>Tantangan</b> di pos. Jawab 3 pertanyaan. Butuh minimal 2 jawaban benar untuk lulus pos.</p></div></div>
+                <div class="pd-step"><span class="pd-num">5</span><div><b>Main Game &amp; Kuis</b><p>Ada berbagai game seru dan kuis interaktif di menu utama. Kumpulkan bintang ⭐ dan XP sebanyaknya!</p></div></div>
+                <div class="pd-step"><span class="pd-num">6</span><div><b>Jelajah Dunia</b><p>Buka menu <b>Jelajah</b> untuk menjelajahi dunia 2D. Temui warga, jawab soal, dan kumpulkan koin 🪙.</p></div></div>
+              </div>
+              <div class="pd-panel" id="pdPeta">
+                <div class="pd-info"><b>🗺️ 6 Pos Misi:</b></div>
+                <div class="pd-poslist">
+                  ${(PP.POS || []).map((p, i) => `<div class="pd-pos"><span class="pd-pnum">${p.id}</span><div><b>${p.name}</b><p class="small muted">${p.intro || 'Tantangan Teorema Pythagoras'}</p></div></div>`).join('')}
+                </div>
+                <div class="pd-tip">💡 <b>Tips:</b> Di setiap pos ada Materi, Tantangan, Game, dan Kuis. Kerjakan semua untuk nilai maksimal!</div>
+              </div>
+              <div class="pd-panel" id="pdJelajah">
+                <div class="pd-info"><b>🌍 Dunia yang Bisa Dijelajahi:</b></div>
+                <div class="pd-worldlist">
+                  <div class="pd-world"><span>🏘️</span><div><b>Desa Siku-siku</b><p class="small muted">Soal tingkat Mudah. Cocok untuk pemanasan.</p></div></div>
+                  <div class="pd-world"><span>🌲</span><div><b>Hutan Hipotenusa</b><p class="small muted">Soal tingkat Sedang. Lebih menantang.</p></div></div>
+                  <div class="pd-world"><span>🏙️</span><div><b>Kota Kuadrat</b><p class="small muted">Soal tingkat Sulit. Butuh pemahaman penuh.</p></div></div>
+                  <div class="pd-world"><span>🌊</span><div><b>Penjelajah Laut</b><p class="small muted">Jelajahi lautan dan selesaikan misi bawah air.</p></div></div>
+                  <div class="pd-world"><span>🏝️</span><div><b>Nusantara</b><p class="small muted">Budaya Indonesia + Pythagoras. Dunia bonus!</p></div></div>
+                </div>
+                <div class="pd-tip">🕹️ <b>Kontrol:</b> Joystick / Tombol panah untuk berjalan. Tombol LARI / Shift untuk lari. Tombol BICARA / E / Spasi untuk berbicara dengan warga.</div>
+              </div>
+              <div class="pd-panel" id="pdOnline">
+                <div class="pd-info"><b>📡 Cara Bermain Online Bersama:</b></div>
+                <div class="pd-step"><span class="pd-num">1</span><div><b>Minta Kode ke Guru</b><p>Guru membuat kode ruang kelas (misal: <code>KELAS8A</code>). Minta kepada gurumu.</p></div></div>
+                <div class="pd-step"><span class="pd-num">2</span><div><b>Masukkan Kode</b><p>Ketik kode ruang di kotak <b>Kode Ruang Kelas</b> di halaman utama ini, lalu klik Simpan.</p></div></div>
+                <div class="pd-step"><span class="pd-num">3</span><div><b>Mulai Bermain</b><p>Klik MULAI PETUALANGAN. Kamu akan terhubung ke server yang sama dengan teman sekelasmu.</p></div></div>
+                <div class="pd-step"><span class="pd-num">4</span><div><b>Lihat Teman Online</b><p>Di menu Jelajah, klik tombol 👥 Online untuk melihat siapa saja yang sedang bermain di ruangmu.</p></div></div>
+                <div class="pd-tip">🔑 <b>Untuk Guru:</b> Login sebagai Guru → klik tombol <b>Buat Kode</b> di profil → bagikan kode ke siswa.</div>
+              </div>
+            </div>
+            <div class="row center" style="margin-top:12px"><button class="btn green" data-act="start">🚀 MULAI PETUALANGAN</button><button class="btn" data-close>Tutup</button></div>
+          </div>`);
+          // Tab switching
+          PP.$$('.pd-tab').forEach(t => t.onclick = () => {
+            PP.$$('.pd-tab').forEach(x => x.classList.remove('active'));
+            PP.$$('.pd-panel').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            const panel = PP.$('#pd' + t.dataset.tab.charAt(0).toUpperCase() + t.dataset.tab.slice(1));
+            if (panel) panel.classList.add('active');
+          });
+        };
+        // Tombol online
+        PP.acts['show-online'] = () => {
+          const SV = window.PPServer;
+          const list = SV ? SV.list() : [];
+          PP.ui.modal(`<h2 class="h-title">👥 Pemain Online</h2>
+            <p class="small muted" style="margin:0 0 8px">Server: <b>${PP.esc(SV ? SV.room() : 'Tidak aktif')}</b>${list.length ? ' · ' + list.length + ' pemain' : ''}</p>
+            ${list.length ? `<ol class="sv-list">${list.map(p => `<li class="${p.me ? 'me' : ''}"><span class="sv-av">${PP.img((PP.AV[p.avatar] || PP.AV_GURU[p.avatar] || PP.AV.boy).idle)}</span><span class="sv-n"><b>${PP.esc(p.name || 'Pemain')}${p.me ? ' (kamu)' : ''}</b><small>${PP.esc([p.kelas, p.sekolah].filter(Boolean).join(' · ')) || '-'}</small></span><span class="sv-xp">${p.xp | 0} XP<small>${p.scene === 'jelajah' ? '🗺️ jelajah' : p.scene === 'kuis' ? '📝 kuis' : '🏠 menu'}</small></span></li>`).join('')}</ol>` : '<p class="muted center" style="padding:16px">Belum ada pemain online di ruang ini.</p>'}
+            <div class="row center"><button class="btn green" data-act="start">Mulai Main</button><button class="btn" data-close>Tutup</button></div>`);
+        };
       },
       unmount() { (this._t || []).forEach(clearInterval); }
     };
