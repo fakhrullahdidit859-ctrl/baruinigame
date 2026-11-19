@@ -57,7 +57,7 @@
 
   /* ---------- misi ---------- */
   S.missionDone = id => !!(S.data.missions[id] && S.data.missions[id].done);
-  S.missionUnlocked = id => id === 1 || S.missionDone(id - 1);
+  S.missionUnlocked = id => true; // semua pos terbuka
   S.doneCount = () => PP.POS.filter(p => S.missionDone(p.id)).length;
   S.nextMission = () => { const p = PP.POS.find(p => !S.missionDone(p.id)); return p ? p.id : null; };
   S.completeMission = function (id, stars) {
