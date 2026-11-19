@@ -11,7 +11,6 @@
   /* kasus: a = sisi tegak, b = sisi alas (mendatar), c = sisi miring. cari: 'c' atau 'a' atau 'b' */
   // Jalur aset Nusantara baru (crop dari Lembar Aset Budaya)
   const N = n => n;  // aset di assets/img/ langsung
-  const O = n => '../lomba/dunia/objek/' + n;  // aset lama fallback
   const CASES = [
     { who: ['Pak Bayu', 'nusa_laki_0', 330, 840, 'bl,ba'], obj: 'nusa_rumah_gadang', ow: 200, ox: 500, oy: 600, t: 'Atap Rumah Gadang', a: 6, b: 8, c: 10, find: 'c', unit: 'm', fact: 'Rumah Gadang adalah rumah adat Minangkabau dari Sumatera Barat. Atapnya bergonjong dan melengkung ke atas.',
       q: 'Kerangka atap sebuah rumah adat bergonjong memakai tiang tegak setinggi 6 m. Jarak mendatar dari kaki tiang ke ujung atap 8 m. Berapa panjang balok miring penghubungnya?',
