@@ -25,17 +25,29 @@
     ['ga', 'gb', 'gc', 'gd'].forEach(k => { if (o[k] < 0) o[k] = -1; });
     return o;
   };
-  let timer = 0, lastJson = '';
-  R.push = function (force) {
+  let timer = 0, lastJson = '', pushRetry = 0;
+  R.push = async function (force) {
     try {
       if (!S() || !window.PP || !PP.registered || !PP.registered() || !window.PPNet || !window.PPCloud) return;
       const id = PPNet.id(), rec = R.mine(), js = JSON.stringify(Object.assign({}, rec, { ts: 0 }));
-      if (!force && js === lastJson) return; lastJson = js; C().put('rapor/' + id, rec);
+      if (!force && js === lastJson) return; lastJson = js;
+      const ok = await C().put('rapor/' + id, rec);
+      if (!ok && pushRetry < 5) { pushRetry++; setTimeout(() => R.push(true), 5000 * pushRetry); } else pushRetry = 0;
     } catch (e) { }
   };
-  const later = () => { clearTimeout(timer); timer = setTimeout(R.push, 3000); };
-  setTimeout(() => { try { S().onChange(later); setTimeout(() => R.push(true), 3000); } catch (e) { } }, 0);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) R.push(); });
+  const later = () => { clearTimeout(timer); timer = setTimeout(R.push, 2000); };
+  setTimeout(() => {
+    try {
+      S().onChange(later);
+      // Push saat pertama kali halaman siap (force=true agar selalu kirim)
+      setTimeout(() => R.push(true), 2000);
+      // Push ulang tiap 60 detik agar data selalu fresh di server
+      setInterval(() => { if (!document.hidden) R.push(false); }, 60000);
+    } catch (e) { }
+  }, 0);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) R.push(true); else R.push(); });
+  // Push ulang saat koneksi internet kembali
+  window.addEventListener('online', () => { lastJson = ''; R.push(true); });
   /* seluruh rapor ruangan + rekap kehadiran (cocok berdasarkan kelas + nama) */
   R.all = async function () {
     const [rp, ab, lk] = await Promise.all([C().get('rapor'), C().get('absen'), C().get('lkpd/nilai').catch(() => null)]);
