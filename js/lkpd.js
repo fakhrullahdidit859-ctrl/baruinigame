@@ -216,8 +216,8 @@
         return `<button class="lkpd-card lkpd-pop ${mine ? 'mine' : ''} ${lock ? 'lock' : ''}" data-lv="${k}" ${lock ? 'aria-disabled="true"' : ''} style="animation-delay:${'abc'.indexOf(k) * .08}s">${ic(d.ikon, 'lkpd-float', 54)}<b>${d.abjad} · ${d.nama}</b><small>${E(d.sebut)} · ${d.bloom}</small><span class="lkpd-top2">${E(d.topik)}</span><em>${st}</em></button>`;
       };
       let status;
-      if (!diag) status = 'Langkah 1: kerjakan <b>Tes Diagnostik</b> agar levelmu ditentukan. Hasilnya dipakai untuk menentukan kelompok.';
-      else if (!myG) status = `Levelmu <b>${E(LVN(el))}</b> (skor ${diag.s}/10). Kamu belum masuk kelompok. Tekan <b>Cek kelompok</b>; bila belum ada, guru akan membentuknya.`;
+      if (!diag && !myG) status = 'Tes Diagnostik bersifat opsional. Kamu bisa langsung tunggu guru menempatkanmu ke kelompok, atau kerjakan tes agar levelmu diketahui.';
+      else if (!myG) status = `${diag ? `Levelmu <b>${E(LVN(el))}</b> (skor ${diag.s}/10). ` : ''}Kamu belum masuk kelompok. Tekan <b>Cek kelompok</b> atau tunggu guru menempatkanmu.`;
       else {
         const ph = phases(myG, P), done = Object.values(ph).filter(Boolean).length, st = statusG(myG, P), dl = deadline(myG, P);
         status = `<b>${E(myG.nm)}</b> · ${members(myG).length} anggota · kemajuan <b>${done}/6</b> · <span class="lkpd-pill ${st[1]}">${st[0]}</span>${dl && !myG.sub ? ` · sisa waktu <b id="lkTmH">${mmss(dl - now())}</b>` : ''}${nilai && nilai.s != null ? ` · nilai <b>${nilai.s}</b>` : ''}`;
@@ -228,8 +228,8 @@
         <button class="btn sm" id="lkQr">${ic('foto_coret', '', 20)} QR</button>${isG ? '<button class="btn sm gold lkpd-pulse" id="lkGuru">⚙ Panel Guru</button>' : ''}</div>
         <div class="lkpd-body"><div class="lkpd-cards">${['a', 'b', 'c'].map(card).join('')}</div>
         <div class="lkpd-acts">
-          <button class="btn ${diag ? '' : 'green lkpd-pulse'}" id="lkDiag">${ic('centang', '', 22)} ${diag ? 'Hasil Tes Diagnostik' : 'Mulai Tes Diagnostik'}</button>
-          ${diag && !myG ? `<button class="btn gold" id="lkChk">↻ Cek kelompok</button>` : ''}
+          <button class="btn" id="lkDiag">${ic('centang', '', 22)} ${diag ? 'Hasil Tes Diagnostik' : 'Tes Diagnostik (opsional)'}</button>
+          ${!myG ? `<button class="btn gold" id="lkChk">↻ Cek kelompok</button>` : ''}
           <button class="btn blue" id="lkOpen" ${myG ? '' : 'disabled'}>${ic(el || 'a', '', 22)} ${myG ? (locked ? 'Riwayat pengerjaan' : 'Buka LKPD-ku') : 'Buka LKPD-ku'}</button>
           ${myG && !locked ? '<button class="btn" id="lkHist">Riwayat</button>' : ''}
           <button class="btn gold" id="lkPres" ${myG ? '' : 'disabled'}>${ic('r_jubir', '', 22)} Presentasi</button>
@@ -290,18 +290,23 @@
     }
     let placing = false;
     async function autoPlace() {
-      if (placing || !diag || myG) return; placing = true;
-      try { const lv = effLevel(); if (lv && L.LV[lv]) { const id = await placeStudent(my.id, my.n, my.k, lv); if (id) { loc().gid = id; } } } catch (e) { } finally { placing = false; }
+      // Siswa bisa ditempatkan otomatis dengan/tanpa tes diagnostik
+      if (placing || myG) return; placing = true;
+      try {
+        const lv = effLevel() || 'b'; // default level B jika belum tes
+        if (L.LV[lv]) { const id = await placeStudent(my.id, my.n, my.k, lv); if (id) { loc().gid = id; } }
+      } catch (e) { } finally { placing = false; }
     }
     function noGroupModal() {
-      PP.ui.modal(`<h3>Kelompokmu belum ada</h3><p class="modal-text small">Guru atau sistem menempatkanmu sesuai hasil tes. Kamu juga bisa bergabung dengan kode kelompok dari guru (harus level yang sama).</p>
+      PP.ui.modal(`<h3>Kelompokmu belum ada</h3><p class="modal-text small">Guru akan menempatkanmu ke kelompok. Kamu juga bisa bergabung dengan kode kelompok dari guru.</p>
         <label class="fld small">Kode kelompok<input class="ab-inp" id="lgCode" maxlength="40" placeholder="Kode dari guru / QR"></label>
         <div class="row end"><button class="btn" data-close>Tutup</button><button class="btn blue" id="lgJoin">Gabung</button></div>`);
       $('#lgJoin').onclick = async () => { const c = $('#lgCode').value.trim(); if (!c) return; PP.ui.close(); await joinGroup(c.replace(/^.*\./, '')); };
     }
     async function joinGroup(id) {
       const x = await C().get(K.grp(id)); if (!validG(x)) return toast('Kode kelompok tidak ditemukan di ruangan ini.', 'x');
-      const n = normG(Object.assign({ id }, x)); if (effLevel() && n.lv !== effLevel()) return toast('Kelompok itu untuk level ' + LVN(n.lv) + '. Levelmu ' + LVN(effLevel()) + '.', 'x');
+      const n = normG(Object.assign({ id }, x));
+      // Tidak lagi memblokir jika level berbeda — guru yang menentukan
       const o = Object.keys(n.mem).length; if (!n.mem[my.id]) { if (o >= gsz()) return toast('Kelompok sudah penuh (' + gsz() + ' orang).', 'x'); await C().put(K.grp(id) + '/mem/' + my.id, { n: my.n, o }); }
       await C().put(K.map(my.id), id); await loadBase(); toast('Bergabung ke ' + n.nm + '.'); draw();
     }
@@ -587,8 +592,19 @@
       };
     }
     async function autoFinal() {
-      if (!g || g.sub || g !== myG) return; g.sub = now(); g.auto = 1; g.un = null; ['sub', 'auto', 'un'].forEach(touch); logEv('waktu habis: LKPD dikirim otomatis'); await flush();
-      sfx('unlock'); PP.ui.modal(`<h3>⏱ Waktu habis</h3><p class="modal-text small">Batas waktu pengerjaan sudah lewat. Isi LKPD kelompokmu dikirim otomatis ke guru dan dikunci. Kamu masih bisa melihat riwayatnya.</p><div class="row end"><button class="btn green" data-close>Oke</button></div>`);
+      if (!g || g.sub || g !== myG) return;
+      // Simpan semua data sebelum dikunci
+      g.sub = now(); g.auto = 1; g.un = null;
+      ['sub', 'auto', 'un'].forEach(touch);
+      logEv('waktu habis: LKPD dikirim otomatis');
+      // Coba kirim ulang hingga 3x agar tidak hilang
+      let ok = false;
+      for (let i = 0; i < 3 && !ok; i++) { try { ok = await flush(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } catch (e) { await new Promise(r => setTimeout(r, 1500)); } }
+      sfx('unlock');
+      PP.ui.modal(`<h3>⏱ Waktu habis</h3><p class="modal-text small">Batas waktu pengerjaan sudah lewat. Semua hasil yang sudah dikerjakan tersimpan${ok ? ' ke server' : ' di perangkat'}. Kamu masih bisa membuat presentasi dan melihat riwayat pengerjaan.</p><div class="row end"><button class="btn" id="aHistBtn">Riwayat</button><button class="btn gold" id="aPresBtn">Presentasi</button><button class="btn green" data-close>Oke</button></div>`);
+      const hb = $('#aHistBtn'), pb = $('#aPresBtn');
+      if (hb) hb.onclick = () => { PP.ui.close(); g = myG; view = 'hist'; draw(); };
+      if (pb) pb.onclick = () => { PP.ui.close(); if (myG) presHome(myG); };
       view = 'hist'; draw();
     }
     const tk = setInterval(() => {
@@ -803,10 +819,20 @@
     let gtab = 'kel', gdata = null, gsel = null;
     const objOf = (a, pre) => { const o = {}; a.forEach((x, i) => { o[(pre || 'k') + String(i).padStart(3, '0')] = x; }); return o; };
     async function loadGuru() {
-      const [rap, dg, mp, gr, nl, rb, cfg, rq, ps] = await Promise.all(['rapor', 'lkpd/diag', 'lkpd/map', 'lkpd/grp', 'lkpd/nilai', 'lkpd/rub', K.cfg, 'lkpd/req', 'lkpd/pres'].map(p => C().get(p)));
+      // Ambil rapor, diagnostik, peta kelompok, grup, nilai, rubrik, config, permintaan, presentasi, dan data players online
+      const [rap, dg, mp, gr, nl, rb, cfg, rq, ps, pl] = await Promise.all(
+        ['rapor', 'lkpd/diag', 'lkpd/map', 'lkpd/grp', 'lkpd/nilai', 'lkpd/rub', K.cfg, 'lkpd/req', 'lkpd/pres', 'players'].map(p => C().get(p))
+      );
       if (rap === undefined || gr === undefined) throw new Error('net');
       if (cfg && typeof cfg === 'object') { P = cleanP(cfg); L.applyCfg(P); }
-      const stu = {}; Object.keys(rap || {}).forEach(id => { const r = rap[id]; if (r && r.n) stu[id] = { id, n: r.n, k: r.k || '' }; });
+      const stu = {};
+      // Data dari rapor (sumber utama)
+      Object.keys(rap || {}).forEach(id => { const r = rap[id]; if (r && r.n) stu[id] = { id, n: r.n, k: r.k || '' }; });
+      // Tambah siswa dari data players online (agar siswa yang baru join juga muncul)
+      Object.keys(pl || {}).forEach(id => {
+        const p = pl[id]; if (!p || !p.name || p.kelas === 'Guru') return;
+        if (!stu[id]) stu[id] = { id, n: p.name, k: p.kelas || '' };
+      });
       Object.keys(dg || {}).forEach(id => { if (dg[id] && typeof dg[id] === 'object') stu[id] = Object.assign(stu[id] || { id, n: dg[id].n, k: dg[id].k || '' }, { d: dg[id] }); });
       const grp = Object.keys(gr || {}).map(id => normG(Object.assign({ id }, gr[id]))).filter(validG);
       grp.forEach(x => Object.keys(x.mem).forEach(id => { if (!stu[id]) stu[id] = { id, n: x.mem[id].n, k: x.k || '' }; }));
@@ -876,7 +902,7 @@
           <button class="btn sm green" id="kAuto">⚙ Bentuk otomatis${waiting ? ' (' + waiting + ' siswa)' : ''}</button><button class="btn sm" id="kAdd">+ Kelompok</button><button class="btn sm red" id="kRst">Reset semua</button></div>
         ${reqs.length ? `<div class="lkpd-sec"><h4>📩 Permintaan siswa (${reqs.length})</h4>${reqs.map(id => { const r = gdata.req[id]; return `<div class="lkpd-req"><b>${E(r.n)}</b> <small>${E(r.k || '')} · skor ${r.s == null ? '–' : r.s} · ${when(r.ts)}</small><p>${E(r.m)}</p><button class="btn xs red" data-rr="${id}">Reset tes siswa</button> <button class="btn xs" data-rd="${id}">Tutup + balas</button></div>`; }).join('')}</div>` : ''}
         <div class="lkpd-sec"><h4>Kelompok (${gdata.grp.length})</h4><div class="lkpd-gc">${gdata.grp.map(x => { const full = Object.keys(x.mem).length >= gsz(); return `<div class="lkpd-gcard"><div class="lkpd-gh">${ic(x.lv, '', 26)}<input class="ab-inp" data-rn="${x.id}" value="${E(x.nm)}" maxlength="40"><span class="lkpd-pill ${full ? 'ok' : 'run'}">${cap(x)}${full ? ' penuh' : ''}</span></div><ul class="lkpd-ml">${members(x).map(m => `<li>${E(m.n)} <small>${E((gdata.stu[m.id] || {}).k || '')}</small> <button class="btn xs" data-dm="${m.id}" title="Keluarkan dari kelompok">✕</button></li>`).join('') || '<li class="muted small">Kosong</li>'}</ul><div class="lkpd-tools"><button class="btn xs" data-gq="${x.id}">QR</button><button class="btn xs red" data-gd="${x.id}">Hapus kelompok</button></div></div>`; }).join('') || '<p class="small muted">Belum ada kelompok. Kelompok dibuat otomatis saat siswa selesai tes, atau tekan + Kelompok.</p>'}</div></div>
-        <div class="lkpd-sec"><h4>Siswa (${S0.length} · ${S0.filter(s => s.d).length} sudah tes)</h4><div class="lkpd-scroll"><table class="lkpd-tbl"><thead><tr><th>Nama</th><th>Kls</th><th>Skor</th><th>Level</th><th>Kelompok</th><th></th></tr></thead><tbody>${S0.map(s => { const cur = gdata.map[s.id] || '', cg = gdata.grp.find(x => x.id === cur), l = effL(s); return `<tr><td>${E(s.n)}</td><td>${E(s.k)}</td><td>${s.d ? s.d.s : '–'}</td><td><select data-ov="${s.id}" ${s.d ? '' : 'disabled'}><option value="">${s.d ? 'otomatis (' + s.d.l.toUpperCase() + ')' : '— belum tes —'}</option>${['a', 'b', 'c'].map(k => `<option value="${k}" ${s.d && s.d.ov === k ? 'selected' : ''}>${k.toUpperCase()} ${L.LV[k].nama}</option>`).join('')}</select></td><td><select data-as="${s.id}" ${s.d || cur ? '' : 'disabled'}>${opts(l, cur)}</select>${cg && l && cg.lv !== l ? ' <small class="badc">level ≠ kelompok</small>' : ''}</td><td>${s.d || cur ? `<button class="btn xs red" data-rs="${s.id}">Reset</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="small">Belum ada siswa. Siswa muncul setelah mengerjakan tes atau membuka game.</td></tr>'}</tbody></table></div></div>`;
+        <div class="lkpd-sec"><h4>Siswa (${S0.length} · ${S0.filter(s => s.d).length} sudah tes · ${S0.filter(s => !s.d).length} belum tes)</h4><p class="small muted">Guru bisa menempatkan siswa ke kelompok tanpa perlu siswa mengerjakan tes diagnostik. Pilih kelompok di kolom Kelompok.</p><div class="lkpd-scroll"><table class="lkpd-tbl"><thead><tr><th>Nama</th><th>Kls</th><th>Skor</th><th>Level</th><th>Kelompok</th><th></th></tr></thead><tbody>${S0.map(s => { const cur = gdata.map[s.id] || '', cg = gdata.grp.find(x => x.id === cur), l = effL(s); return `<tr><td>${E(s.n)}</td><td>${E(s.k)}</td><td>${s.d ? s.d.s : '–'}</td><td><select data-ov="${s.id}" ${s.d ? '' : 'disabled'}><option value="">${s.d ? 'otomatis (' + s.d.l.toUpperCase() + ')' : '— belum tes —'}</option>${['a', 'b', 'c'].map(k => `<option value="${k}" ${s.d && s.d.ov === k ? 'selected' : ''}>${k.toUpperCase()} ${L.LV[k].nama}</option>`).join('')}</select></td><td><select data-as="${s.id}">${opts(l, cur)}</select>${cg && l && cg.lv !== l ? ' <small class="badc">level ≠ kelompok</small>' : ''}</td><td><button class="btn xs red" data-rs="${s.id}">Reset</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="small">Belum ada siswa. Siswa muncul setelah membuka LKPD atau mengerjakan tes.</td></tr>'}</tbody></table></div></div>`;
       $('#kSz', B).onchange = async e => { const ok = await cfgPut({ gs: +e.target.value }); msg(ok ? 'Isi kelompok: ' + e.target.value + ' orang (berlaku untuk penempatan berikutnya).' : 'Gagal menyimpan.', !ok); gPaint(); };
       $('#kAu', B).onchange = async e => { await cfgPut({ au: e.target.checked ? 1 : 0 }); msg(e.target.checked ? 'Penempatan otomatis aktif.' : 'Penempatan otomatis dimatikan.'); };
       $('#kAdd', B).onclick = () => { PP.ui.modal(`<h3>Kelompok baru: pilih level</h3><div class="row">${['a', 'b', 'c'].map(k => `<button class="btn" data-nl="${k}">${L.LV[k].abjad} · ${L.LV[k].nama}</button>`).join('')}</div><div class="row end"><button class="btn" data-close>Batal</button></div>`); $$('[data-nl]').forEach(b => b.onclick = async () => { PP.ui.close(); await addGroup(b.dataset.nl); msg('Kelompok dibuat.'); gReload(); }); };
