@@ -367,6 +367,7 @@
           </div>
           <fieldset class="avs avgrid"><legend>Pilih karakter <b class="req">*</b></legend>
             ${PP.AVORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV[k].idle)}</span><span class="av-nm">${PP.AV[k].name}</span></label>`).join('')}
+            ${PP.GURU_ORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV_GURU[k].idle)}</span><span class="av-nm">${PP.AV_GURU[k].name}</span></label>`).join('')}
           </fieldset>
           <label class="fld">Kode server / ruangan ${PPNet.configured() ? '' : '(belum aktif)'}
             <span class="rm-row"><input id="pfRoom" maxlength="10" value="${PP.esc(PPNet.room() || PPNet.fromUrl())}" placeholder="${PPNet.configured() ? 'Kosongkan untuk server umum' : 'Online belum aktif'}" ${PPNet.configured() ? '' : 'disabled'} autocapitalize="characters" spellcheck="false"><button class="btn sm nosfx" type="button" id="pfGen" ${PPNet.configured() ? '' : 'hidden'}>Buat kode</button></span></label>
@@ -713,15 +714,19 @@
     refreshAudioUi();
   }
   let _errT = 0; window.addEventListener('error', e => { try {
-    if (!e.error && !e.message) return;
-    // Abaikan error resource (gambar/audio/video tidak load) — bukan error JS kritis
-    if (e.target && e.target !== window && (e.target.tagName === 'IMG' || e.target.tagName === 'AUDIO' || e.target.tagName === 'VIDEO' || e.target.tagName === 'SOURCE')) return;
-    // Abaikan error jaringan / CORS yang tidak fatal
+    // Abaikan semua error dari elemen resource (gambar, audio, video, script eksternal)
+    if (!e || e.target !== window) return;
+    // Abaikan bila tidak ada objek error JS asli
+    if (!e.error) return;
+    // Abaikan error jaringan / CORS / resource / script cross-origin
     const msg = (e.message || '').toLowerCase();
-    if (!e.error || msg.includes('script error') || msg.includes('network') || msg.includes('fetch') || msg.includes('load')) return;
+    if (!msg || msg === 'script error' || msg.includes('network') || msg.includes('fetch') || msg.includes('load') || msg.includes('cors') || msg.includes('failed') || msg.includes('abort') || msg.includes('timeout')) return;
+    // Throttle: hanya tampilkan max 1x per 15 detik
+    const n = Date.now(); if (n - _errT < 15000) return; _errT = n;
     console.warn('[PP error]', e.message, e.filename, e.lineno);
-    const n = Date.now(); if (n - _errT < 8000) return; _errT = n;
     PP.ui.toast('Terjadi kesalahan kecil. Coba lagi.', 'x');
   } catch (_) {} }, true);
+  // Tangkap juga unhandledrejection (Promise gagal) agar tidak muncul sebagai error
+  window.addEventListener('unhandledrejection', e => { try { e.preventDefault(); console.warn('[PP promise]', e.reason); } catch (_) {} });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
