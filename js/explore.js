@@ -399,9 +399,11 @@
         }
         function openWard() {
           const draw = () => {
+            const guruAvs = Object.keys(PP.AV_GURU || {});
             PP.ui.modal(`<h2 class="h-title">Lemari Gaya <span class="pill"><img class="pi" src="assets/img/new/m_coin.png" alt="">${ex.coins}</span></h2>
-              <p class="small muted" style="margin:0">Karakter</p><div class="x-ward">${Object.keys(PP.AV).map(k => `<button class="x-it ${S.data.avatar === k ? 'on' : ''}" data-av="${k}">${PP.img(PP.AV[k].idle)}<span>${PP.AV[k].name}</span></button>`).join('')}</div>
-              <p class="small muted" style="margin:6px 0 0">Aksesori</p><div class="x-ward">${ITEMS.map(it => { const own = ex.owned[it.id], on = ex.equip[it.id]; return `<button class="x-it ${on ? 'on' : ''}" data-it="${it.id}">${PP.img(it.img)}<span>${it.name}</span><em>${own ? (on ? 'Dipakai' : 'Pakai') : it.price + ' koin'}</em></button>`; }).join('')}</div>
+              <p class="small muted" style="margin:0">🎒 Karakter Siswa</p><div class="x-ward">${Object.keys(PP.AV).map(k => `<button class="x-it ${S.data.avatar === k ? 'on' : ''}" data-av="${k}">${PP.img(PP.AV[k].idle)}<span>${PP.AV[k].name}</span></button>`).join('')}</div>
+              ${guruAvs.length ? `<p class="small muted" style="margin:8px 0 0">👩‍🏫 Karakter Guru</p><div class="x-ward">${guruAvs.map(k => `<button class="x-it ${S.data.avatar === k ? 'on' : ''}" data-av="${k}">${PP.img(PP.AV_GURU[k].idle)}<span>${PP.AV_GURU[k].name}</span></button>`).join('')}</div>` : ''}
+              <p class="small muted" style="margin:8px 0 0">✨ Aksesori</p><div class="x-ward">${ITEMS.map(it => { const own = ex.owned[it.id], on = ex.equip[it.id]; return `<button class="x-it ${on ? 'on' : ''}" data-it="${it.id}">${PP.img(it.img)}<span>${it.name}</span><em>${own ? (on ? 'Dipakai' : 'Pakai') : it.price + ' koin'}</em></button>`; }).join('')}</div>
               <div class="row center"><button class="btn green" data-close>Selesai</button></div>`);
             PP.$$('[data-av]').forEach(b => b.onclick = () => { S.data.avatar = b.dataset.av; S.save(); A.sfx('tick'); $('xWardImg').src = `assets/img/${PP.me().idle}.png`; draw(); });
             PP.$$('[data-it]').forEach(b => b.onclick = () => {
