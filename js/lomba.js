@@ -15,7 +15,7 @@
   ];
   PP.screens.lomba = function () {
     return {
-      html: `<div class="wrap narrowish"><div class="panel fill pad lb"><h2 class="h-title" style="margin:0">Fitur Lomba</h2><p class="small" style="margin:0">Fitur tambahan untuk belajar, mengajar, dan berbagi.</p>
+      html: `<div class="wrap narrowish"><div class="panel fill pad lb"><h2 class="h-title" style="margin:0">Rekap dan Upload</h2><p class="small" style="margin:0">Fitur tambahan untuk belajar, mengajar, dan berbagi.</p>
         <div class="lb-grid">${CARDS.map(c => `<button class="lb-card" data-lb="${c[0]}"><span class="lb-ic">${I(c[3])}</span><b>${c[1]}</b><span class="lb-d">${c[2]}</span>${c[4] ? '<em class="lb-tag">Guru</em>' : ''}</button>`).join('')}</div></div></div>`,
       mount(root) {
         root.querySelectorAll('[data-lb]').forEach(b => b.onclick = () => {
