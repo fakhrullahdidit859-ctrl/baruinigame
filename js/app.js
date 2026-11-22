@@ -129,7 +129,8 @@
     PP.go(prev || 'menu');
   };
   const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Fitur Lomba', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
-    games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH' };
+    games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH',
+    'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun' };
 
   function render() {
     const r = parse();
@@ -457,8 +458,14 @@
             <label class="fld pf-wide"><span>Sekolah <b class="req">*</b></span><input id="pfSekolah" maxlength="60" value="${PP.esc(d.sekolah || '')}" placeholder="Contoh: SMP Negeri 1 Pekanbaru" required></label>
           </div>
           <fieldset class="avs avgrid"><legend>Pilih karakter <b class="req">*</b></legend>
-            ${PP.AVORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV[k].idle)}</span><span class="av-nm">${PP.AV[k].name}</span></label>`).join('')}
-            ${PP.GURU_ORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV_GURU[k].idle)}</span><span class="av-nm">${PP.AV_GURU[k].name}</span></label>`).join('')}
+            <p class="av-sec-label">🎒 Karakter Siswa</p>
+            <div class="av-group">
+              ${PP.AVORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV[k].idle)}</span><span class="av-nm">${PP.AV[k].name}</span></label>`).join('')}
+            </div>
+            <p class="av-sec-label" style="margin-top:12px">👩‍🏫 Karakter Guru</p>
+            <div class="av-group">
+              ${PP.GURU_ORDER.map(k => `<label class="av ${PP.registered() && d.avatar === k ? 'on' : ''}"><input type="radio" name="av" value="${k}" ${PP.registered() && d.avatar === k ? 'checked' : ''}><span class="av-pic">${PP.img(PP.AV_GURU[k].idle)}</span><span class="av-nm">${PP.AV_GURU[k].name}</span></label>`).join('')}
+            </div>
           </fieldset>
           <label class="fld">Kode server / ruangan ${PPNet.configured() ? '' : '(belum aktif)'}
             <span class="rm-row"><input id="pfRoom" maxlength="10" value="${PP.esc(PPNet.room() || PPNet.fromUrl())}" placeholder="${PPNet.configured() ? 'Kosongkan untuk server umum' : 'Online belum aktif'}" ${PPNet.configured() ? '' : 'disabled'} autocapitalize="characters" spellcheck="false"><button class="btn sm nosfx" type="button" id="pfGen" ${PPNet.configured() ? '' : 'hidden'}>Buat kode</button></span></label>
@@ -595,7 +602,9 @@
       ['lkpd', 'LKPD Proyek', 'Proyek kelompok & presentasi.', 'm_lkpd', 'c15'],
       ['integrasi', 'Integrasi Platform', 'Canva, AI Studio, Zeepquiz, Wordwall.', 'm_integrasi', 'c16'],
       ['offline', 'Mode Offline', 'Pasang & mainkan tanpa internet.', 'm_offline', 'c17'],
-      ['lomba', 'Fitur Lomba', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13']
+      ['lomba', 'Fitur Lomba', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
+      ['upload-soal', 'Upload Soal', 'Tambah soal dari file Word/Excel/PDF.', 'ic_gear', 'c18'],
+      ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'ic_medal', 'c19']
     ];
     const next = S.nextMission(), n = S.doneCount();
     const msg = n === 0 ? 'Pilih menu. Untuk memulai, buka Peta Petualangan.' : n === 6 ? 'Hebat! Semua pos selesai. Cek hasilmu di Program Penilaian.' : 'Kamu sudah menyelesaikan ' + n + ' dari 6 pos. Ayo lanjutkan!';
@@ -792,6 +801,286 @@
         <p class="pill big">Predikat: ${pr.t}</p>
         <div class="row center"><button class="btn green" data-go="nilai">Lihat Hasil Belajar</button><button class="btn" data-go="kuis">Kerjakan Kuis</button><button class="btn" data-go="menu">Menu Utama</button></div></div></div>`,
       mount() { setTimeout(() => { A.sfx('victory'); PP.ui.confetti(70); }, 300); }
+    };
+  };
+
+  /* =====================================================
+     LAYAR: UPLOAD SOAL
+     Format CSV/Excel: Soal|PilihanA|PilihanB|PilihanC|PilihanD|JawabanBenar(A/B/C/D)|Pembahasan
+     Format Word/PDF: Guru perlu copy-paste dalam format yang sama
+     ===================================================== */
+  PP.screens['upload-soal'] = function () {
+    const isGuru = PP.AV_GURU[S.data.avatar];
+    if (!isGuru) {
+      return { html: `<div class="wrap narrow"><div class="panel pad center"><h2 class="h-title">🔒 Fitur Khusus Guru</h2><p>Fitur upload soal hanya bisa digunakan oleh akun guru.</p><p class="muted small">Login dengan karakter guru di halaman profil.</p><div class="row center"><button class="btn green" data-go="profil">Ke Profil</button><button class="btn" data-act="back">Kembali</button></div></div></div>` };
+    }
+    // Ambil soal yang sudah diupload
+    const KEY_US = 'pp_upload_soal_v1';
+    let uploadedQ = [];
+    try { uploadedQ = JSON.parse(localStorage.getItem(KEY_US) || '[]'); } catch(e) { uploadedQ = []; }
+
+    function parseCSV(text) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+      const soal = [];
+      for (const line of lines) {
+        // support: | atau ; atau tab sebagai pemisah
+        const sep = line.includes('|') ? '|' : line.includes(';') ? ';' : '\t';
+        const cols = line.split(sep).map(c => c.trim());
+        if (cols.length < 6) continue;
+        const [q, oA, oB, oC, oD, jawaban, ...rest] = cols;
+        const e = rest.join(' ') || '';
+        const jawIdx = {A:0,B:1,C:2,D:3}[jawaban.toUpperCase()];
+        if (!q || jawIdx === undefined) continue;
+        soal.push({ q, o: [oA,oB,oC,oD].filter(Boolean), a: jawIdx, e: e || '', lv: 'Upload', _src: 'upload' });
+      }
+      return soal;
+    }
+
+    return {
+      html: `<div class="wrap narrow"><div class="panel fill pad scrollbox us-wrap">
+        <h2 class="h-title">📤 Upload Soal</h2>
+        <p class="small">Upload soal dalam format CSV/Excel atau teks biasa. Soal yang diupload akan muncul di <b>Kuis Interaktif</b>, <b>Game Tantangan</b>, dan <b>Game Jelajah Dunia</b>.</p>
+
+        <div class="us-box">
+          <h3 class="us-sec">📋 Format Soal</h3>
+          <p class="small muted">Satu baris = satu soal. Pisahkan kolom dengan tanda <code>|</code> (pipa):</p>
+          <pre class="us-pre">Soal|PilihanA|PilihanB|PilihanC|PilihanD|JawabanBenar|Pembahasan
+Jika a=3, b=4, berapa c?|5|6|7|8|A|c²=3²+4²=25, c=5
+Sisi miring segitiga 10, alas 6, tinggi?|8|7|6|9|A|8²+6²=100=10²</pre>
+          <p class="small muted">Kolom Pembahasan boleh kosong. Jawaban Benar diisi: A, B, C, atau D.</p>
+        </div>
+
+        <div class="us-box">
+          <h3 class="us-sec">📁 Upload File</h3>
+          <p class="small">Upload file CSV, Excel (.xlsx), Word (.docx), atau PDF — isi akan dibaca otomatis jika teks berformat di atas.</p>
+          <div class="us-drop" id="usDrop">
+            <span>🗂️ Klik atau seret file ke sini</span>
+            <input type="file" id="usFile" accept=".csv,.txt,.xlsx,.docx,.pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+          </div>
+          <p class="small muted" id="usFileName">Belum ada file dipilih</p>
+        </div>
+
+        <div class="us-box">
+          <h3 class="us-sec">✏️ Tempel Langsung (copy-paste)</h3>
+          <textarea id="usPaste" class="us-ta" rows="6" placeholder="Tempel soal di sini...&#10;Contoh:&#10;Jika a=6 dan b=8, berapa c?|10|11|12|13|A|c²=6²+8²=100, c=10"></textarea>
+        </div>
+
+        <div class="row center" style="gap:8px;margin-top:4px">
+          <button class="btn green" id="usImport">✓ Impor Soal</button>
+          <button class="btn" id="usPreview">👁️ Preview</button>
+          ${uploadedQ.length ? `<button class="btn red sm" id-us="clear">🗑️ Hapus Semua (${uploadedQ.length} soal)</button>` : ''}
+          <button class="btn" data-act="back">Kembali</button>
+        </div>
+
+        <div id="usResult" style="margin-top:12px"></div>
+
+        ${uploadedQ.length ? `
+        <div class="us-box" style="margin-top:16px">
+          <h3 class="us-sec">📚 Soal Tersimpan (${uploadedQ.length} soal)</h3>
+          <ol class="us-list">${uploadedQ.map((q,i) => `<li><b>${q.q}</b><br><small class="muted">Jawaban: ${'ABCD'[q.a]} · ${q.o[q.a]}</small></li>`).join('')}</ol>
+        </div>` : ''}
+
+        <div class="us-watermark">Made by Didit Fakhrullah</div>
+      </div></div>`,
+      mount(root) {
+        const KEY_US = 'pp_upload_soal_v1';
+        let parsed = [];
+        const result = PP.$('#usResult', root);
+
+        function showResult(msg, ok) {
+          result.innerHTML = `<p class="${ok ? 'us-ok' : 'err'}" style="padding:8px 12px;border-radius:8px;background:${ok ? '#d4f5d4' : '#ffe0e0'}">${msg}</p>`;
+        }
+        function doImport(text) {
+          parsed = parseCSV(text);
+          if (!parsed.length) { showResult('⚠️ Tidak ada soal yang bisa dibaca. Periksa format.', false); return; }
+          let existing = [];
+          try { existing = JSON.parse(localStorage.getItem(KEY_US) || '[]'); } catch(e) {}
+          existing = existing.concat(parsed);
+          try {
+            localStorage.setItem(KEY_US, JSON.stringify(existing));
+            // Daftarkan ke PP.JSESS agar langsung aktif
+            if (!window.PP.JSESS) PP.JSESS = { map: {} };
+            parsed.forEach((q, i) => { const id = 'up_' + Date.now() + '_' + i; PP.JSESS.map[id] = q; });
+            showResult(`✓ Berhasil mengimpor <b>${parsed.length} soal</b>! Soal akan aktif di game setelah halaman dimuat ulang.`, true);
+            setTimeout(() => location.reload(), 1800);
+          } catch(e) { showResult('Gagal menyimpan: ' + e.message, false); }
+        }
+
+        // File input
+        PP.$('#usFile', root).onchange = function() {
+          const f = this.files[0]; if (!f) return;
+          PP.$('#usFileName', root).textContent = f.name;
+          const reader = new FileReader();
+          reader.onload = e => { PP.$('#usPaste', root).value = e.target.result; };
+          reader.readAsText(f);
+        };
+
+        // Drop zone
+        const drop = PP.$('#usDrop', root);
+        drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+        drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+        drop.addEventListener('drop', e => {
+          e.preventDefault(); drop.classList.remove('drag');
+          const f = e.dataTransfer.files[0]; if (!f) return;
+          PP.$('#usFileName', root).textContent = f.name;
+          new FileReader().onload = ev => { PP.$('#usPaste', root).value = ev.target.result; };
+          new FileReader().readAsText(f);
+        });
+
+        // Preview
+        PP.$('#usPreview', root).onclick = () => {
+          const text = PP.$('#usPaste', root).value.trim();
+          if (!text) { showResult('Isi dulu soalnya.', false); return; }
+          parsed = parseCSV(text);
+          if (!parsed.length) { showResult('Format tidak dikenali. Lihat contoh format di atas.', false); return; }
+          result.innerHTML = `<div class="us-box"><h4>Preview ${parsed.length} soal:</h4><ol class="us-list">${parsed.map(q => `<li><b>${PP.esc(q.q)}</b><br><small>A. ${q.o[0]} · B. ${q.o[1]} · C. ${q.o[2]} · D. ${q.o[3]}</small><br><small class="muted">Jawaban: ${['A','B','C','D'][q.a]} — ${PP.esc(q.e || '-')}</small></li>`).join('')}</ol></div>`;
+        };
+
+        // Import
+        PP.$('#usImport', root).onclick = () => {
+          const text = PP.$('#usPaste', root).value.trim();
+          if (!text) { showResult('Isi dulu soalnya.', false); return; }
+          doImport(text);
+        };
+
+        // Clear
+        const clrBtn = root.querySelector('[id-us="clear"]');
+        if (clrBtn) clrBtn.onclick = () => {
+          PP.ui.modal(`<h3>Hapus Semua Soal Upload?</h3><p class="modal-text">Semua soal yang pernah diupload akan dihapus permanen.</p><div class="row end"><button class="btn" data-close>Batal</button><button class="btn red" id="usConfClear">Ya, Hapus</button></div>`);
+          setTimeout(() => {
+            const cb = PP.$('#usConfClear');
+            if (cb) cb.onclick = () => { localStorage.removeItem(KEY_US); PP.ui.close(); PP.go('upload-soal'); };
+          }, 100);
+        };
+      }
+    };
+  };
+
+  /* =====================================================
+     LAYAR: PENGATURAN AKUN
+     ===================================================== */
+  PP.screens.pengaturan = function () {
+    const d = S.data;
+    const isGuru = !!(PP.AV_GURU[d.avatar]);
+    const KEY_PWD = 'pp_pwd_v1';
+    const KEY_GURU_CODE = 'pp_guru_code_v1';
+    let savedPwd = ''; try { savedPwd = localStorage.getItem(KEY_PWD) || ''; } catch(e) {}
+    let guruCode = ''; try { guruCode = localStorage.getItem(KEY_GURU_CODE) || ''; } catch(e) {}
+
+    return {
+      html: `<div class="wrap narrow"><div class="panel fill pad scrollbox pgt-wrap">
+        <h2 class="h-title">⚙️ Pengaturan Akun</h2>
+
+        <div class="pgt-box">
+          <h3 class="pgt-sec">👤 Ubah Nama</h3>
+          <label class="fld"><span>Nama Tampil</span>
+            <input id="pgtName" maxlength="40" value="${PP.esc(d.name)}" placeholder="Nama kamu">
+          </label>
+          <label class="fld"><span>Kelas</span>
+            <input id="pgtKelas" maxlength="20" value="${PP.esc(d.kelas)}" placeholder="Contoh: VIII A">
+          </label>
+          <label class="fld"><span>Sekolah</span>
+            <input id="pgtSekolah" maxlength="60" value="${PP.esc(d.sekolah || '')}" placeholder="Nama sekolah">
+          </label>
+        </div>
+
+        <div class="pgt-box">
+          <h3 class="pgt-sec">🔒 Ubah Kata Sandi</h3>
+          <p class="small muted">Kata sandi disimpan di perangkat ini dan digunakan untuk melindungi data progres.</p>
+          <label class="fld"><span>Kata Sandi Lama</span>
+            <input id="pgtPwdOld" type="password" maxlength="30" placeholder="${savedPwd ? 'Masukkan sandi lama' : 'Belum ada sandi'}">
+          </label>
+          <label class="fld"><span>Kata Sandi Baru</span>
+            <input id="pgtPwdNew" type="password" maxlength="30" placeholder="Minimal 4 karakter">
+          </label>
+          <label class="fld"><span>Konfirmasi Kata Sandi Baru</span>
+            <input id="pgtPwdCfm" type="password" maxlength="30" placeholder="Ulangi kata sandi baru">
+          </label>
+        </div>
+
+        ${isGuru ? `
+        <div class="pgt-box">
+          <h3 class="pgt-sec">🏫 Kode Guru / Ruang Kelas</h3>
+          <p class="small muted">Kode ini dibagikan ke siswa agar mereka bisa bergabung di ruang kelas online yang sama.</p>
+          <label class="fld"><span>Kode Guru</span>
+            <span class="rm-row">
+              <input id="pgtGuruCode" maxlength="10" value="${PP.esc(guruCode)}" placeholder="Buat kode unik" autocapitalize="characters" spellcheck="false">
+              <button class="btn sm nosfx" type="button" id="pgtGenCode">🎲 Buat Acak</button>
+            </span>
+          </label>
+          ${PPNet.configured() ? `
+          <label class="fld"><span>Kode Ruang Kelas (Server Online)</span>
+            <span class="rm-row">
+              <input id="pgtRoom" maxlength="10" value="${PP.esc(PPNet.room() || '')}" placeholder="Kode untuk server online" autocapitalize="characters" spellcheck="false">
+              <button class="btn sm nosfx" type="button" id="pgtGenRoom">🎲 Buat Acak</button>
+            </span>
+          </label>` : ''}
+        </div>` : ''}
+
+        <p class="err" id="pgtErr" hidden></p>
+        <p class="pgt-ok" id="pgtOk" hidden>✓ Pengaturan berhasil disimpan!</p>
+
+        <div class="row center" style="gap:8px;margin-top:8px">
+          <button class="btn green" id="pgtSave">💾 Simpan Perubahan</button>
+          <button class="btn" data-act="back">Kembali</button>
+        </div>
+
+        <div class="pgt-watermark">Made by Didit Fakhrullah</div>
+      </div></div>`,
+      mount(root) {
+        const KEY_PWD = 'pp_pwd_v1';
+        const KEY_GURU_CODE = 'pp_guru_code_v1';
+        const err = m => { const e = PP.$('#pgtErr', root); e.textContent = m; e.hidden = !m; PP.$('#pgtOk', root).hidden = true; };
+        const ok = () => { PP.$('#pgtOk', root).hidden = false; PP.$('#pgtErr', root).hidden = true; };
+
+        // Generate kode acak
+        const genCode = () => { const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join(''); };
+        const pgtGen = PP.$('#pgtGenCode', root);
+        if (pgtGen) pgtGen.onclick = () => { PP.$('#pgtGuruCode', root).value = genCode(); A.sfx('tick'); };
+        const pgtRoom = PP.$('#pgtGenRoom', root);
+        if (pgtRoom) pgtRoom.onclick = () => { PP.$('#pgtRoom', root).value = PPNet.genRoom(); A.sfx('tick'); };
+
+        PP.$('#pgtSave', root).onclick = () => {
+          err('');
+          // Validasi nama
+          const nm = PP.$('#pgtName', root).value.trim();
+          const kl = PP.$('#pgtKelas', root).value.trim();
+          const sk = PP.$('#pgtSekolah', root).value.trim();
+          if (!nm) { err('Nama tidak boleh kosong.'); PP.$('#pgtName', root).focus(); return; }
+          if (!kl) { err('Kelas tidak boleh kosong.'); PP.$('#pgtKelas', root).focus(); return; }
+          if (!sk) { err('Sekolah tidak boleh kosong.'); PP.$('#pgtSekolah', root).focus(); return; }
+
+          // Validasi password
+          const pwdOld = PP.$('#pgtPwdOld', root).value;
+          const pwdNew = PP.$('#pgtPwdNew', root).value;
+          const pwdCfm = PP.$('#pgtPwdCfm', root).value;
+          let savedPwd2 = ''; try { savedPwd2 = localStorage.getItem(KEY_PWD) || ''; } catch(e) {}
+          if (pwdNew) {
+            if (savedPwd2 && pwdOld !== savedPwd2) { err('Kata sandi lama tidak sesuai.'); PP.$('#pgtPwdOld', root).focus(); return; }
+            if (pwdNew.length < 4) { err('Kata sandi baru minimal 4 karakter.'); PP.$('#pgtPwdNew', root).focus(); return; }
+            if (pwdNew !== pwdCfm) { err('Konfirmasi kata sandi tidak cocok.'); PP.$('#pgtPwdCfm', root).focus(); return; }
+            try { localStorage.setItem(KEY_PWD, pwdNew); } catch(e) { err('Gagal simpan kata sandi: ' + e.message); return; }
+          }
+
+          // Simpan kode guru
+          const gcEl = PP.$('#pgtGuruCode', root);
+          if (gcEl) {
+            const gc = gcEl.value.trim().toUpperCase();
+            try { localStorage.setItem(KEY_GURU_CODE, gc); } catch(e) {}
+          }
+          // Simpan kode ruang
+          const rmEl = PP.$('#pgtRoom', root);
+          if (rmEl && PPNet.configured()) {
+            const rc = PPNet.normRoom(rmEl.value);
+            if (rc && !PPNet.validRoom(rc)) { err('Kode ruang harus 3–10 huruf atau angka.'); rmEl.focus(); return; }
+            PPNet.setRoom(rc);
+          }
+
+          // Simpan profil
+          S.data.name = nm; S.data.kelas = kl; S.data.sekolah = sk; S.save();
+          A.sfx('point'); ok();
+        };
+      }
     };
   };
 
