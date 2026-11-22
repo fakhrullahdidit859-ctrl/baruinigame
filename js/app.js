@@ -615,12 +615,9 @@
       ['integrasi', 'Integrasi Platform', 'Canva, AI Studio, Zeepquiz, Wordwall.', 'm_integrasi', 'c16'],
       ['offline', 'Mode Offline', 'Pasang & mainkan tanpa internet.', 'm_offline', 'c17'],
       ['lomba', 'Fitur Lomba', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
-      ['upload-soal', 'Upload Soal', 'Tambah soal dari file Word/Excel/PDF.', 'upload_soal', 'c18'],
       ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'pengaturan', 'c19']
     ];
-    // Kartu upload soal hanya tampil untuk guru
-    const isGuru = PP.AV_GURU[S.data.avatar];
-    const visibleCards = isGuru ? cards : cards.filter(c => c[0] !== 'upload-soal');
+    const visibleCards = cards;
     const next = S.nextMission(), n = S.doneCount();
     const msg = n === 0 ? 'Pilih menu. Untuk memulai, buka Peta Petualangan.' : n === 6 ? 'Hebat! Semua pos selesai. Cek hasilmu di Program Penilaian.' : 'Kamu sudah menyelesaikan ' + n + ' dari 6 pos. Ayo lanjutkan!';
     return { html: `<div class="wrap"><div class="hub">
