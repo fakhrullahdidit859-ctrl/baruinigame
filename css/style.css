@@ -1732,29 +1732,91 @@ textarea.lkpd-in{resize:none}
 .int-pre{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 .int-modal{max-width:min(520px,94vw)}
 
-/* ===== MENU UTAMA v2: kotak lebih ringkas (6x3), ikon lebih besar dan berkilau ===== */
+/* ===== MENU UTAMA v3: 6 kolom × 3 baris — semua 18 kartu seimbang ===== */
 .c17{background:linear-gradient(#8fd9ff,#2f78d6)}
-.menu-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(0,clamp(92px,25vh,158px)))!important;max-width:1000px!important;gap:clamp(7px,1.5vh,12px)!important}
-.menu-card{border-width:3px!important;border-radius:18px!important;padding:8px 4px 6px!important;gap:3px!important;box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.18),0 4px 0 var(--line)!important}
+.int-orbit{transform-origin:32px 31px;animation:int-spin 14s linear infinite}@keyframes int-spin{to{transform:rotate(360deg)}}
+
+/* Reset agar tidak bertumpuk dengan aturan lama */
+.menu-grid{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  grid-template-rows:repeat(3,minmax(0,clamp(80px,22vh,148px)))!important;
+  max-width:1040px!important;
+  gap:clamp(5px,1.2vh,10px)!important;
+  align-content:start!important;
+}
+.menu-card{
+  border-width:3px!important;border-radius:16px!important;
+  padding:6px 3px 5px!important;gap:2px!important;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.18),0 4px 0 var(--line)!important;
+}
 .menu-card::before{background:radial-gradient(circle at 50% 28%,rgba(255,255,255,.4),transparent 62%)!important}
 .mc-d{display:none!important}
 .mc-ic{flex:1 1 0!important}
-.mc-plate{max-height:none!important;height:100%!important;max-width:88%!important;border:3px solid rgba(40,24,10,.6)!important;background:radial-gradient(circle at 32% 24%,#fffef6,#fbeec2 62%,#efd48a)!important;box-shadow:0 4px 0 rgba(0,0,0,.28),0 0 0 3px rgba(255,255,255,.35),inset 0 -5px 0 rgba(160,110,40,.25)!important}
-.mc-plate .mic{width:80%!important;height:80%!important}
-.menu-card b{min-height:2em!important;font-size:clamp(.66rem,2.1vh,.95rem)!important;line-height:1.05!important;padding:0 2px}
-.int-orbit{transform-origin:32px 31px;animation:int-spin 14s linear infinite}@keyframes int-spin{to{transform:rotate(360deg)}}
-@media (max-aspect-ratio:1/1){.menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(6,minmax(0,clamp(74px,12vh,118px)))!important}}
-@media (max-width:640px) and (min-aspect-ratio:1/1){.menu-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}.menu-card b{font-size:.6rem!important}}
-.menu-grid{grid-template-rows:repeat(3,minmax(0,clamp(92px,28vh,185px)))!important}
+.mc-plate{
+  max-height:none!important;height:100%!important;max-width:84%!important;
+  border:3px solid rgba(40,24,10,.6)!important;
+  background:radial-gradient(circle at 32% 24%,#fffef6,#fbeec2 62%,#efd48a)!important;
+  box-shadow:0 4px 0 rgba(0,0,0,.28),0 0 0 3px rgba(255,255,255,.35),inset 0 -5px 0 rgba(160,110,40,.25)!important;
+}
+.mc-plate .mic{width:78%!important;height:78%!important}
+.menu-card b{
+  min-height:1.9em!important;
+  font-size:clamp(.55rem,min(1.9vh,1.3vw),.92rem)!important;
+  line-height:1.05!important;padding:0 2px;
+}
+
+/* === TABLET landscape (1024×768, iPad Pro, dll) === */
+@media (min-width:900px) and (min-height:600px){
+  .menu-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(0,clamp(88px,22vh,150px)))!important}
+}
+
+/* === Tablet portrait (768px lebar, iPad) === */
+@media (max-width:900px) and (min-width:600px) and (max-aspect-ratio:1/1){
+  .menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,clamp(72px,13.5vh,110px)))!important}
+  .menu-card b{font-size:clamp(.6rem,min(2vh,2.5vw),.88rem)!important}
+  .hub{grid-template-columns:1fr!important;grid-template-rows:auto minmax(0,1fr)!important}
+  .hub-side{flex-direction:row;flex-wrap:wrap;padding:6px 10px!important}
+  .hub-vid{display:none!important}
+  .guide{display:none!important}
+  .pc-btns{grid-template-columns:1fr 1fr 1fr!important}
+}
+
+/* === HP landscape (< 600px tinggi, ratio lebar) === */
+@media (max-height:500px) and (min-aspect-ratio:1/1){
+  .menu-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(0,clamp(60px,18vh,110px)))!important;gap:4px!important}
+  .menu-card b{font-size:clamp(.5rem,2.2vh,.78rem)!important;min-height:1.6em!important}
+  .mc-plate{max-width:76%!important}
+  .hub-side{display:none!important}
+  .hub{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+}
+
+/* === HP portrait (< 600px lebar) === */
+@media (max-width:599px) and (max-aspect-ratio:1/1){
+  .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(6,minmax(0,clamp(68px,14.5vw,105px)))!important;gap:clamp(4px,1.5vw,8px)!important}
+  .menu-card b{font-size:clamp(.55rem,min(2.5vw,2.5vh),.82rem)!important;min-height:1.8em!important}
+  .mc-plate{max-width:80%!important}
+  .hub{grid-template-columns:1fr!important;grid-template-rows:auto minmax(0,1fr)!important}
+  .hub-side{flex-direction:column;padding:6px 8px!important}
+  .hub-vid{display:none!important}
+  .guide{display:none!important}
+  .pc-btns{grid-template-columns:1fr 1fr!important}
+  .pc-btns .pc-main{grid-column:1/-1!important}
+}
+
+/* === HP kecil portrait (< 400px) === */
+@media (max-width:399px){
+  .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important}
+  .menu-card b{font-size:clamp(.5rem,4vw,.75rem)!important}
+}
+
+/* === Hub layout untuk layar sedang landscape === */
 @media (min-aspect-ratio:11/10) and (max-aspect-ratio:5/4) and (min-width:760px){
-  .hub{grid-template-columns:minmax(210px,260px) 1fr;grid-template-rows:minmax(0,1fr)}
+  .hub{grid-template-columns:minmax(190px,240px) 1fr;grid-template-rows:minmax(0,1fr)}
   .hub-side{justify-content:flex-start}.hub-side .guide{flex-direction:column;align-items:center;text-align:center}
   .hub-side .guide-pic{width:clamp(50px,12vh,100px)}.hub-side .guide-bubble{width:100%;flex:none}
   .prog-card{flex-direction:column;align-items:stretch}.prog-card .btn{width:100%}.pc-btns{grid-template-columns:1fr}
 }
-@media (max-width:1000px) and (min-height:560px) and (min-aspect-ratio:11/10){.menu-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(4,minmax(0,clamp(84px,17vh,130px)))!important}}
-.menu-card b{font-size:clamp(.58rem,min(2.1vh,1.45vw),.95rem)!important}
-@media (max-aspect-ratio:1/1){.menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(5,minmax(0,clamp(80px,13vh,120px)))!important}.menu-card b{font-size:clamp(.55rem,min(1.8vh,2.7vw),.85rem)!important}}
 
 /* ===== Perbaikan responsif: LKPD di HP landscape ===== */
 .lkpd-root,.lkpd-body,.lkpd-top{min-width:0;max-width:100%;box-sizing:border-box}
