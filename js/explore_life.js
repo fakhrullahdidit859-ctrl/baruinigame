@@ -11,7 +11,7 @@
   function rngf(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   /* ---------- animasi manusia: tubuh atas bergoyang, kaki kiri-kanan bergantian ---------- */
-  const CUT = spr => /^(girl|hijab)/.test(spr) ? 0.8 : /^owl/.test(spr) ? 1 : 0.66;
+  const CUT = spr => /^(girl|hijab|nusa_cewek|nusa_hijab)/.test(spr) ? 0.8 : /^owl/.test(spr) ? 1 : 0.66;
   /* Frame jalan dibuat dari SATU gambar: badan atas utuh, hanya bagian kaki (di bawah pinggul) yang
      bergeser dan terangkat bergantian, dengan rampa halus sehingga tidak ada sambungan / belahan. */
   const NF = 12, PAD = 12, WF = {};
@@ -46,7 +46,9 @@
         const sn = Math.sin(ph + side * Math.PI), lf = Math.max(0, Math.cos(ph + side * Math.PI)), x0 = side ? cx : 0, w = side ? W - cx : cx;
         for (let r = an.hip + 1; r <= H - 1; r++) {
           const t = Math.min(1, (r - an.hip) / legH), dx = Math.round(dxm * sn * Math.pow(t, 1.15)), dy = Math.round(lift * lf * t) + bob;
-          g.drawImage(src, x0, r, w, 1, PAD + x0 + dx, PAD + r - dy, w, 1);
+          const destX = PAD + x0 + dx;
+          if (destX < 0 || destX + w > c.width) continue; // jangan keluar dari canvas
+          g.drawImage(src, x0, r, w, 1, destX, PAD + r - dy, w, 1);
         }
       }
       frames.push(c);
@@ -56,7 +58,7 @@
   function drawHuman(ctx, i, spr, x, y, h, f, t, amp, deco, outfit) {
     if (!i) return 0;
     const iw = i.naturalWidth, ih = i.naturalHeight, w = h * iw / ih, cut = CUT(spr), ph = t * 9.5, s = Math.sin(ph), sc = h / ih;
-    const sx = Math.max(0.12, Math.abs(f)) * (f < 0 ? -1 : 1);
+    const sx = Math.max(0.35, Math.abs(f)) * (f < 0 ? -1 : 1); // minimal 0.35 agar karakter tidak terlalu gepeng saat putar
     ctx.save(); ctx.translate(x, y); ctx.scale(sx, 1); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     let bob;
     if (outfit && cut < 1 && window.PPCostume) PPCostume.layer(ctx, outfit, h, amp, t, true);
@@ -66,7 +68,8 @@
     } else if (amp > 0.2) {                                  // berjalan: kaki bergerak, badan utuh
       const fr = walkFrames(spr, i), k = ((Math.floor(ph / (2 * Math.PI) * NF) % NF) + NF) % NF, c = fr[k];
       bob = 0; ctx.rotate(s * 0.018 * amp);
-      ctx.drawImage(c, -(w / 2 + PAD * sc), -(h + PAD * sc) + 0, c.width * sc, c.height * sc);
+      // PAD ditambahkan di kiri dan atas frame canvas — offset negatif agar anchor tetap di kaki karakter
+      ctx.drawImage(c, -(w / 2 + PAD * sc), -(h + PAD * sc), c.width * sc, c.height * sc);
     } else {                                                 // diam: bernapas pelan
       bob = Math.sin(t * 2 + x * 0.05) * 0.7; const sq = 1 + Math.sin(t * 2.2) * 0.012;
       ctx.translate(0, -bob); ctx.scale(1, sq); ctx.drawImage(i, -w / 2, -h, w, h);
