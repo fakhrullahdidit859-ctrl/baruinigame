@@ -149,10 +149,13 @@
     PP.ui.close();
     // Halaman yang bisa diakses tanpa registrasi
     const openPages = /^(splash|petunjuk|profil|profil-guru|)$/;
-    if (!PP.registered() && !openPages.test(r.name)) {
+    // Halaman yang bisa diakses selama avatar guru valid (meski data lain belum lengkap)
+    const guruPages = /^(upload-soal|pengaturan)$/;
+    const hasGuruAv = !!(S.data.avatar && PP.AV_GURU[S.data.avatar]);
+    if (!PP.registered() && !openPages.test(r.name) && !(guruPages.test(r.name) && hasGuruAv)) {
       PP.ctx.afterProfile = location.hash.replace(/^#/, '') || 'menu';
       // Tentukan halaman profil yang sesuai (guru atau siswa)
-      r.name = (PP.ctx.isGuru) ? 'profil-guru' : 'profil';
+      r.name = (PP.ctx.isGuru || hasGuruAv) ? 'profil-guru' : 'profil';
       r.arg = '';
     }
     const fn = PP.screens[r.name] || PP.screens.splash;
@@ -612,9 +615,12 @@
       ['integrasi', 'Integrasi Platform', 'Canva, AI Studio, Zeepquiz, Wordwall.', 'm_integrasi', 'c16'],
       ['offline', 'Mode Offline', 'Pasang & mainkan tanpa internet.', 'm_offline', 'c17'],
       ['lomba', 'Fitur Lomba', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
-      ['upload-soal', 'Upload Soal', 'Tambah soal dari file Word/Excel/PDF.', 'ic_gear', 'c18'],
-      ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'ic_medal', 'c19']
+      ['upload-soal', 'Upload Soal', 'Tambah soal dari file Word/Excel/PDF.', 'upload_soal', 'c18'],
+      ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'pengaturan', 'c19']
     ];
+    // Kartu upload soal hanya tampil untuk guru
+    const isGuru = PP.AV_GURU[S.data.avatar];
+    const visibleCards = isGuru ? cards : cards.filter(c => c[0] !== 'upload-soal');
     const next = S.nextMission(), n = S.doneCount();
     const msg = n === 0 ? 'Pilih menu. Untuk memulai, buka Peta Petualangan.' : n === 6 ? 'Hebat! Semua pos selesai. Cek hasilmu di Program Penilaian.' : 'Kamu sudah menyelesaikan ' + n + ' dari 6 pos. Ayo lanjutkan!';
     return { html: `<div class="wrap"><div class="hub">
@@ -626,7 +632,7 @@
           <button class="btn blue sm" data-go="papan">Peringkat</button></div></div>
         <div class="hub-vid fx-root" data-view="menu-video"><div id="hubVid" class="fx-video-slot"></div><div class="hv-cap"><span id="hvCap">Video panduan guru</span><button type="button" class="hv-swap nosfx" id="hvSwap" aria-label="Ganti video (khusus guru)">${window.FX ? FX.icon('swap-video') : ''}<span>Ganti</span></button></div></div>
       </div>
-      <div class="menu-grid">${cards.map((c, i) => `<button class="menu-card ${c[4]}" data-go="${c[0]}" style="--i:${i}"><span class="mc-ic"><span class="mc-plate">${PP.ICONS[c[3]]}</span></span><b>${c[1]}</b><span class="mc-d">${c[2]}</span></button>`).join('')}</div></div></div>`,
+      <div class="menu-grid">${visibleCards.map((c, i) => `<button class="menu-card ${c[4]}" data-go="${c[0]}" style="--i:${i}"><span class="mc-ic"><span class="mc-plate">${PP.ICONS[c[3]] || ''}</span></span><b>${c[1]}</b><span class="mc-d">${c[2]}</span></button>`).join('')}</div></div></div>`,
       mount(root) { const h = root.querySelector('#hubVid'), cap = root.querySelector('#hvCap'); this._v = window.PPVideo ? PPVideo.mount(h, cap) : null; const sw = root.querySelector('#hvSwap'); if (sw) sw.onclick = () => PPVideo && PPVideo.openAdmin(() => PP.go('menu')); },
       unmount() { if (this._v) { this._v(); this._v = null; } } };
   };
