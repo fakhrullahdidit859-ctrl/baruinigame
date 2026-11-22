@@ -905,30 +905,39 @@ Sisi miring segitiga 10, alas 6, tinggi?|8|7|6|9|A|8²+6²=100=10²</pre>
         function showResult(msg, ok) {
           result.innerHTML = `<p class="${ok ? 'us-ok' : 'err'}" style="padding:8px 12px;border-radius:8px;background:${ok ? '#d4f5d4' : '#ffe0e0'}">${msg}</p>`;
         }
+        function readFileToTextarea(file) {
+          if (!file) return;
+          PP.$('#usFileName', root).textContent = file.name;
+          const reader = new FileReader();
+          reader.onload = ev => { PP.$('#usPaste', root).value = ev.target.result || ''; };
+          reader.onerror = () => showResult('Gagal membaca file.', false);
+          reader.readAsText(file, 'UTF-8');
+        }
+
         function doImport(text) {
           parsed = parseCSV(text);
           if (!parsed.length) { showResult('⚠️ Tidak ada soal yang bisa dibaca. Periksa format.', false); return; }
           let existing = [];
-          try { existing = JSON.parse(localStorage.getItem(KEY_US) || '[]'); } catch(e) {}
+          try { existing = JSON.parse(localStorage.getItem(KEY_US) || '[]'); } catch(e) { existing = []; }
           existing = existing.concat(parsed);
           try {
             localStorage.setItem(KEY_US, JSON.stringify(existing));
-            // Daftarkan ke PP.JSESS agar langsung aktif
-            if (!window.PP.JSESS) PP.JSESS = { map: {} };
-            parsed.forEach((q, i) => { const id = 'up_' + Date.now() + '_' + i; PP.JSESS.map[id] = q; });
-            showResult(`✓ Berhasil mengimpor <b>${parsed.length} soal</b>! Soal akan aktif di game setelah halaman dimuat ulang.`, true);
-            setTimeout(() => location.reload(), 1800);
+            // Daftarkan ke PP.JSESS agar langsung aktif tanpa reload
+            if (!window.PP) window.PP = {};
+            if (!PP.JSESS) PP.JSESS = { map: {} };
+            if (!PP.JSESS.map) PP.JSESS.map = {};
+            parsed.forEach((q, i) => {
+              const id = 'up_' + Date.now() + '_' + i;
+              PP.JSESS.map[id] = q;
+            });
+            showResult(`✓ Berhasil mengimpor <b>${parsed.length} soal</b>! Soal langsung aktif di Kuis & Game.`, true);
+            // Refresh daftar soal di halaman tanpa reload penuh
+            setTimeout(() => PP.go('upload-soal'), 1500);
           } catch(e) { showResult('Gagal menyimpan: ' + e.message, false); }
         }
 
         // File input
-        PP.$('#usFile', root).onchange = function() {
-          const f = this.files[0]; if (!f) return;
-          PP.$('#usFileName', root).textContent = f.name;
-          const reader = new FileReader();
-          reader.onload = e => { PP.$('#usPaste', root).value = e.target.result; };
-          reader.readAsText(f);
-        };
+        PP.$('#usFile', root).onchange = function() { readFileToTextarea(this.files[0]); };
 
         // Drop zone
         const drop = PP.$('#usDrop', root);
@@ -936,10 +945,7 @@ Sisi miring segitiga 10, alas 6, tinggi?|8|7|6|9|A|8²+6²=100=10²</pre>
         drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
         drop.addEventListener('drop', e => {
           e.preventDefault(); drop.classList.remove('drag');
-          const f = e.dataTransfer.files[0]; if (!f) return;
-          PP.$('#usFileName', root).textContent = f.name;
-          new FileReader().onload = ev => { PP.$('#usPaste', root).value = ev.target.result; };
-          new FileReader().readAsText(f);
+          readFileToTextarea(e.dataTransfer.files[0]);
         });
 
         // Preview
