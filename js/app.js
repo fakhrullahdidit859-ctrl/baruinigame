@@ -137,7 +137,7 @@
     while (prev && /^(splash|)$/.test(prev)) prev = navTrail.pop();
     PP.go(prev || 'menu');
   };
-  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Fitur Lomba', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
+  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
     games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH',
     'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun' };
 
@@ -614,7 +614,7 @@
       ['lkpd', 'LKPD Proyek', 'Proyek kelompok & presentasi.', 'm_lkpd', 'c15'],
       ['integrasi', 'Integrasi Platform', 'Canva, AI Studio, Zeepquiz, Wordwall.', 'm_integrasi', 'c16'],
       ['offline', 'Mode Offline', 'Pasang & mainkan tanpa internet.', 'm_offline', 'c17'],
-      ['lomba', 'Fitur Lomba', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
+      ['lomba', 'Rekap dan Upload', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
       ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'pengaturan', 'c19']
     ];
     const visibleCards = cards;
