@@ -43,6 +43,19 @@
       <path d="M19 12 H8 Q6 28 20 31 M45 12 H56 Q58 28 44 31" fill="none" ${S}/>
       <path d="M17 6 H47 V24 Q47 38 32 41 Q17 38 17 24 Z" fill="#ffcf3d" ${S}/>
       <path d="M32 13 L35 21 L43 21 L37 26 L39 34 L32 29 L25 34 L27 26 L21 21 L29 21 Z" fill="#fff6c8" stroke="${O}" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="28" y="41" width="8" height="9" fill="#e0a21f" ${S}/><rect x="18" y="50" width="28" height="9" rx="3" fill="#c07a2a" ${S}/>`)
+      <rect x="28" y="41" width="8" height="9" fill="#e0a21f" ${S}/><rect x="18" y="50" width="28" height="9" rx="3" fill="#c07a2a" ${S}/>`),
+    upload_soal: svg('upload_soal', `
+      <rect x="8" y="12" width="48" height="40" rx="6" fill="#fff8e6" ${S}/>
+      <rect x="8" y="12" width="48" height="14" rx="6" fill="#4a9fd4" ${S}/>
+      <rect x="8" y="20" width="48" height="6" fill="#4a9fd4"/>
+      <path d="M32 18 L32 44" stroke="#2d7ab0" stroke-width="3" stroke-linecap="round"/>
+      <path d="M24 28 L32 18 L40 28" fill="#fff" stroke="#2d7ab0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M20 44 H44" stroke="#c98b4a" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="49" cy="47" r="11" fill="#43b33f" stroke="${O}" stroke-width="2.5"/>
+      <path d="M44 47 L48 51 L55 43" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`),
+    pengaturan: svg('pengaturan', `
+      <circle cx="32" cy="32" r="10" fill="#fff8e6" ${S}/>
+      <path d="M32 6 L35 14 Q38 14 41 16 L49 12 L52 15 L48 23 Q50 26 50 30 L58 33 L58 37 L50 40 Q50 44 48 47 L52 55 L49 58 L41 54 Q38 56 35 56 L32 64 L29 64 L26 56 Q23 56 20 54 L12 58 L9 55 L13 47 Q11 44 11 40 L3 37 L3 33 L11 30 Q11 26 13 23 L9 15 L12 12 L20 16 Q23 14 26 14 Z" fill="#8b5cf6" ${S}/>
+      <circle cx="32" cy="32" r="8" fill="#fff8e6" ${S}/>`)
   };
 })();
