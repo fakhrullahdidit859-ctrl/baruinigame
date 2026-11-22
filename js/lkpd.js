@@ -892,6 +892,22 @@
       await dropMember(sid); await C().del(K.diag(sid)); const r = gdata.req[sid]; if (r) { await C().put(K.req(sid), Object.assign({}, r, { st: 'selesai', re: 'Hasil tes direset guru. Silakan kerjakan ulang tes diagnostik.', ts: now() })); }
       delete (gdata.stu[sid] || {}).d;
     }
+    async function deleteStudent(sid) {
+      // 1. Keluarkan dari kelompok
+      await dropMember(sid);
+      // 2. Hapus semua path Firebase terkait siswa ini
+      await Promise.all([
+        C().del(K.diag(sid)),       // hasil tes diagnostik
+        C().del(K.nilai(sid)),      // nilai individu
+        C().del(K.req(sid)),        // permintaan siswa
+        C().del('rapor/' + sid),    // data rapor / profil siswa
+        C().del('players/' + sid),  // data online (jika ada)
+      ]);
+      // 3. Hapus dari state lokal
+      delete gdata.stu[sid];
+      delete gdata.nilai[sid];
+      delete gdata.req[sid];
+    }
     function gKel(B) {
       const S0 = Object.values(gdata.stu).sort((a, b) => (a.k + a.n).localeCompare(b.k + b.n)), reqs = Object.keys(gdata.req).filter(id => gdata.req[id] && gdata.req[id].st === 'baru');
       const waiting = S0.filter(s => s.d && !gdata.map[s.id]).length;
@@ -902,7 +918,7 @@
           <button class="btn sm green" id="kAuto">⚙ Bentuk otomatis${waiting ? ' (' + waiting + ' siswa)' : ''}</button><button class="btn sm" id="kAdd">+ Kelompok</button><button class="btn sm red" id="kRst">Reset semua</button></div>
         ${reqs.length ? `<div class="lkpd-sec"><h4>📩 Permintaan siswa (${reqs.length})</h4>${reqs.map(id => { const r = gdata.req[id]; return `<div class="lkpd-req"><b>${E(r.n)}</b> <small>${E(r.k || '')} · skor ${r.s == null ? '–' : r.s} · ${when(r.ts)}</small><p>${E(r.m)}</p><button class="btn xs red" data-rr="${id}">Reset tes siswa</button> <button class="btn xs" data-rd="${id}">Tutup + balas</button></div>`; }).join('')}</div>` : ''}
         <div class="lkpd-sec"><h4>Kelompok (${gdata.grp.length})</h4><div class="lkpd-gc">${gdata.grp.map(x => { const full = Object.keys(x.mem).length >= gsz(); return `<div class="lkpd-gcard"><div class="lkpd-gh">${ic(x.lv, '', 26)}<input class="ab-inp" data-rn="${x.id}" value="${E(x.nm)}" maxlength="40"><span class="lkpd-pill ${full ? 'ok' : 'run'}">${cap(x)}${full ? ' penuh' : ''}</span></div><ul class="lkpd-ml">${members(x).map(m => `<li>${E(m.n)} <small>${E((gdata.stu[m.id] || {}).k || '')}</small> <button class="btn xs" data-dm="${m.id}" title="Keluarkan dari kelompok">✕</button></li>`).join('') || '<li class="muted small">Kosong</li>'}</ul><div class="lkpd-tools"><button class="btn xs" data-gq="${x.id}">QR</button><button class="btn xs red" data-gd="${x.id}">Hapus kelompok</button></div></div>`; }).join('') || '<p class="small muted">Belum ada kelompok. Kelompok dibuat otomatis saat siswa selesai tes, atau tekan + Kelompok.</p>'}</div></div>
-        <div class="lkpd-sec"><h4>Siswa (${S0.length} · ${S0.filter(s => s.d).length} sudah tes · ${S0.filter(s => !s.d).length} belum tes)</h4><p class="small muted">Guru bisa menempatkan siswa ke kelompok tanpa perlu siswa mengerjakan tes diagnostik. Pilih kelompok di kolom Kelompok.</p><div class="lkpd-scroll"><table class="lkpd-tbl"><thead><tr><th>Nama</th><th>Kls</th><th>Skor</th><th>Level</th><th>Kelompok</th><th></th></tr></thead><tbody>${S0.map(s => { const cur = gdata.map[s.id] || '', cg = gdata.grp.find(x => x.id === cur), l = effL(s); return `<tr><td>${E(s.n)}</td><td>${E(s.k)}</td><td>${s.d ? s.d.s : '–'}</td><td><select data-ov="${s.id}" ${s.d ? '' : 'disabled'}><option value="">${s.d ? 'otomatis (' + s.d.l.toUpperCase() + ')' : '— belum tes —'}</option>${['a', 'b', 'c'].map(k => `<option value="${k}" ${s.d && s.d.ov === k ? 'selected' : ''}>${k.toUpperCase()} ${L.LV[k].nama}</option>`).join('')}</select></td><td><select data-as="${s.id}">${opts(l, cur)}</select>${cg && l && cg.lv !== l ? ' <small class="badc">level ≠ kelompok</small>' : ''}</td><td><button class="btn xs red" data-rs="${s.id}">Reset</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="small">Belum ada siswa. Siswa muncul setelah membuka LKPD atau mengerjakan tes.</td></tr>'}</tbody></table></div></div>`;
+        <div class="lkpd-sec"><h4>Siswa (${S0.length} · ${S0.filter(s => s.d).length} sudah tes · ${S0.filter(s => !s.d).length} belum tes)</h4><p class="small muted">Guru bisa menempatkan siswa ke kelompok tanpa perlu siswa mengerjakan tes diagnostik. Pilih kelompok di kolom Kelompok.</p><div class="lkpd-scroll"><table class="lkpd-tbl"><thead><tr><th>Nama</th><th>Kls</th><th>Skor</th><th>Level</th><th>Kelompok</th><th></th></tr></thead><tbody>${S0.map(s => { const cur = gdata.map[s.id] || '', cg = gdata.grp.find(x => x.id === cur), l = effL(s); return `<tr><td>${E(s.n)}</td><td>${E(s.k)}</td><td>${s.d ? s.d.s : '–'}</td><td><select data-ov="${s.id}" ${s.d ? '' : 'disabled'}><option value="">${s.d ? 'otomatis (' + s.d.l.toUpperCase() + ')' : '— belum tes —'}</option>${['a', 'b', 'c'].map(k => `<option value="${k}" ${s.d && s.d.ov === k ? 'selected' : ''}>${k.toUpperCase()} ${L.LV[k].nama}</option>`).join('')}</select></td><td><select data-as="${s.id}">${opts(l, cur)}</select>${cg && l && cg.lv !== l ? ' <small class="badc">level ≠ kelompok</small>' : ''}</td><td style="white-space:nowrap"><button class="btn xs" data-es="${s.id}" title="Edit nama siswa">✏</button> <button class="btn xs red" data-rs="${s.id}">Reset</button> <button class="btn xs red" data-hs="${s.id}" title="Hapus siswa dari database">🗑</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="small">Belum ada siswa. Siswa muncul setelah membuka LKPD atau mengerjakan tes.</td></tr>'}</tbody></table></div></div>`;
       $('#kSz', B).onchange = async e => { const ok = await cfgPut({ gs: +e.target.value }); msg(ok ? 'Isi kelompok: ' + e.target.value + ' orang (berlaku untuk penempatan berikutnya).' : 'Gagal menyimpan.', !ok); gPaint(); };
       $('#kAu', B).onchange = async e => { await cfgPut({ au: e.target.checked ? 1 : 0 }); msg(e.target.checked ? 'Penempatan otomatis aktif.' : 'Penempatan otomatis dimatikan.'); };
       $('#kAdd', B).onclick = () => { PP.ui.modal(`<h3>Kelompok baru: pilih level</h3><div class="row">${['a', 'b', 'c'].map(k => `<button class="btn" data-nl="${k}">${L.LV[k].abjad} · ${L.LV[k].nama}</button>`).join('')}</div><div class="row end"><button class="btn" data-close>Batal</button></div>`); $$('[data-nl]').forEach(b => b.onclick = async () => { PP.ui.close(); await addGroup(b.dataset.nl); msg('Kelompok dibuat.'); gReload(); }); };
@@ -915,6 +931,32 @@
       $$('[data-rr]', B).forEach(b => b.onclick = () => PP.ui.confirm('Reset tes siswa ini? Ia keluar dari kelompok dan harus tes ulang.', 'Reset', async () => { await resetStudent(b.dataset.rr); msg('Tes siswa direset.'); gReload(); }));
       $$('[data-rd]', B).forEach(b => b.onclick = () => { const r = gdata.req[b.dataset.rd]; PP.ui.modal(`<h3>Balas ${E(r.n)}</h3><textarea class="ab-inp" id="rdT" rows="3" maxlength="200" placeholder="Balasan singkat (opsional)"></textarea><div class="row end"><button class="btn" data-close>Batal</button><button class="btn green" id="rdOk">Tutup permintaan</button></div>`); $('#rdOk').onclick = async () => { await C().put(K.req(b.dataset.rd), Object.assign({}, r, { st: 'selesai', re: $('#rdT').value.trim() || 'Sudah ditinjau guru.', ts: now() })); PP.ui.close(); gReload(); }; });
       $$('[data-rs]', B).forEach(b => b.onclick = () => PP.ui.confirm('Reset hasil tes dan keanggotaan siswa ini? Ia harus tes ulang.', 'Reset', async () => { await resetStudent(b.dataset.rs); msg('Siswa direset.'); gReload(); }));
+      $$('[data-es]', B).forEach(b => b.onclick = () => {
+        const sid = b.dataset.es, s = gdata.stu[sid];
+        PP.ui.modal(`<h3>Edit Data Siswa</h3><div style="margin-bottom:8px"><label class="small">Nama siswa</label><input class="ab-inp" id="esN" value="${E(s.n)}" maxlength="40" placeholder="Nama siswa"></div><div style="margin-bottom:12px"><label class="small">Kelas</label><input class="ab-inp" id="esK" value="${E(s.k)}" maxlength="20" placeholder="Kelas (mis. 8A)"></div><div class="row end"><button class="btn" data-close>Batal</button><button class="btn green" id="esOk">Simpan</button></div>`);
+        $('#esOk').onclick = async () => {
+          const nm = $('#esN').value.trim(), kl = $('#esK').value.trim();
+          if (!nm) { toast('Nama tidak boleh kosong.', 'x'); return; }
+          const ops = [];
+          // Update rapor
+          ops.push(C().patch('rapor/' + sid, { n: nm, k: kl }));
+          // Update diag jika ada
+          if (s.d) ops.push(C().patch(K.diag(sid), { n: nm, k: kl }));
+          // Update nama di semua kelompok yang ia ikuti
+          const gid = gdata.map[sid];
+          if (gid) ops.push(C().put(K.grp(gid) + '/mem/' + sid, Object.assign({}, (gdata.grp.find(x => x.id === gid) || {}).mem?.[sid] || {}, { n: nm })));
+          await Promise.all(ops);
+          s.n = nm; s.k = kl; if (s.d) { s.d.n = nm; s.d.k = kl; }
+          PP.ui.close(); msg('Data siswa diperbarui.'); gPaint();
+        };
+      });
+      $$('[data-hs]', B).forEach(b => b.onclick = () => {
+        const sid = b.dataset.hs, s = gdata.stu[sid];
+        PP.ui.confirm(`Hapus siswa <b>${E(s.n)}</b> dari database? Semua data tes, nilai, dan keanggotaan kelompoknya akan dihapus permanen dari Firebase. Tidak bisa dibatalkan.`, 'Hapus Permanen', async () => {
+          await deleteStudent(sid);
+          msg('Siswa dihapus dari database.'); gReload();
+        });
+      });
       $$('[data-rn]', B).forEach(i => i.onchange = async () => { const v = i.value.trim().slice(0, 40); if (!v) return gPaint(); await C().put(K.grp(i.dataset.rn) + '/nm', v); gdata.grp.find(x => x.id === i.dataset.rn).nm = v; msg('Nama kelompok disimpan.'); });
       $$('[data-dm]', B).forEach(b => b.onclick = async () => { await dropMember(b.dataset.dm); msg('Siswa dikeluarkan dari kelompok.'); gPaint(); });
       $$('[data-gq]', B).forEach(b => b.onclick = () => { const keep = g; g = gdata.grp.find(x => x.id === b.dataset.gq); teacher = true; qrModal(); g = keep; });
