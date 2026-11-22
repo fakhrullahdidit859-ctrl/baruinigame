@@ -3,7 +3,7 @@
   'use strict';
   const I = n => `<img class="px" src="assets/lomba/ikon/${n}.png" alt="" draggable="false">`;
   PP.ICONS = PP.ICONS || {};
-  PP.ICONS.lomba = `<img src="assets/lomba/ikon/ikon_koleksi_lencana.png" alt="" draggable="false" style="width:100%;height:100%;object-fit:contain">`;
+  PP.ICONS.lomba = `<svg class="mic mic-lomba" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="26" r="20" fill="#ffd34d" stroke="#3b2412" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="26" r="13" fill="#fff8e6" stroke="#3b2412" stroke-width="2.5"/><path d="M32 14 L35 22 L44 22 L37 27 L40 36 L32 31 L24 36 L27 27 L20 22 L29 22 Z" fill="#ffd34d" stroke="#3b2412" stroke-width="2" stroke-linejoin="round"/><path d="M22 44 L16 58 L32 51 L48 58 L42 44" fill="#e5484d" stroke="#3b2412" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   const CARDS = [
     ['rekap', 'Rekap Nilai', 'Semua nilai, cetak, Excel, Word, PDF.', 'ikon_rapor', 'guru'],
     ['laporan', 'Sertifikat & Rapor', 'Sertifikat PNG dan rapor belajar.', 'ikon_sertifikat'],
