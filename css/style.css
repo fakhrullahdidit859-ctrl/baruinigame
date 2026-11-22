@@ -1834,3 +1834,39 @@ textarea.lkpd-in{resize:none}
 /* NPC dengan sprite nusa_ sudah otomatis via system render */
 /* Pastikan background transparan */
 img[src*="nusa_"] { image-rendering: pixelated; }
+
+/* ===== Menu kartu c18 (Upload Soal) & c19 (Pengaturan) ===== */
+.menu-card.c18 { background: linear-gradient(135deg,#4a9fd4,#2d7ab0); }
+.menu-card.c19 { background: linear-gradient(135deg,#8b5cf6,#6d28d9); }
+
+/* ===== Separator karakter di form profil ===== */
+.av-sec-label {
+  width: 100%;
+  font-size: .78rem;
+  font-weight: 800;
+  color: #7c5a2a;
+  margin: 4px 0 2px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.av-group { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ===== Upload Soal (screen upload-soal) ===== */
+.us-wrap { max-width: 680px; margin: 0 auto; }
+.us-box { background: rgba(255,255,255,.65); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; border: 1.5px solid rgba(100,70,20,.12); }
+.us-sec { font-size: .95rem; font-weight: 800; color: #3b2412; margin: 0 0 8px; }
+.us-pre { background: #f5f0e8; border-radius: 8px; padding: 10px 12px; font-size: .78rem; overflow-x: auto; white-space: pre-wrap; border: 1px solid #d4b88a; color: #3b2412; }
+.us-ta { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1.5px solid #c8a86a; padding: 10px; font-size: .88rem; font-family: monospace; background: #fdfaf4; resize: vertical; }
+.us-drop { position: relative; border: 2.5px dashed #c8a86a; border-radius: 10px; padding: 22px; text-align: center; color: #7c5a2a; font-weight: 700; cursor: pointer; background: #fdf8f0; transition: background .15s; }
+.us-drop.drag, .us-drop:hover { background: #fdf0d8; }
+.us-list { font-size: .82rem; padding-left: 1.4em; margin: 0; }
+.us-list li { padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,.06); }
+.us-ok { color: #1a6b2a; font-weight: 700; }
+.us-watermark { text-align: center; font-size: .7rem; color: rgba(80,50,10,.35); margin-top: 20px; }
+
+/* ===== Pengaturan Akun (screen pengaturan) ===== */
+.pgt-wrap { max-width: 540px; margin: 0 auto; }
+.pgt-box { background: rgba(255,255,255,.65); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; border: 1.5px solid rgba(100,70,20,.12); }
+.pgt-sec { font-size: .95rem; font-weight: 800; color: #3b2412; margin: 0 0 10px; }
+.pgt-ok { background: #d4f5d4; color: #1a6b2a; border-radius: 8px; padding: 10px 14px; font-weight: 700; text-align: center; }
+.pgt-watermark { text-align: center; font-size: .7rem; color: rgba(80,50,10,.35); margin-top: 20px; }
