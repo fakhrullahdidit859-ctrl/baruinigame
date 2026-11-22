@@ -910,7 +910,7 @@
     }
     function gKel(B) {
       const S0 = Object.values(gdata.stu).sort((a, b) => (a.k + a.n).localeCompare(b.k + b.n)), reqs = Object.keys(gdata.req).filter(id => gdata.req[id] && gdata.req[id].st === 'baru');
-      const waiting = S0.filter(s => s.d && !gdata.map[s.id]).length;
+      const waiting = S0.filter(s => !gdata.map[s.id]).length;
       const cap = x => Object.keys(x.mem).length + '/' + gsz();
       const opts = (lvx, cur) => `<option value="">— belum —</option>${gdata.grp.filter(x => !lvx || x.lv === lvx).map(x => `<option value="${x.id}" ${x.id === cur ? 'selected' : ''}>${E(x.nm)} (${cap(x)})</option>`).join('')}`;
       B.innerHTML = `<div class="lkpd-bar"><label class="small">Isi per kelompok <select id="kSz">${[4, 5, 6].map(n => `<option value="${n}" ${gsz() === n ? 'selected' : ''}>${n} orang</option>`).join('')}</select></label>
@@ -967,12 +967,50 @@
     async function addGroup(lvx) {
       const n = gdata.grp.filter(x => x.lv === lvx).length + 1, id = 'g' + rid(), x = fresh(lvx, id, L.nm(lvx, n)); x.ts0 = now(); gdata.grp.push(x); await C().put(K.grp(id), x); return x;
     }
-    async function autoForm() {
-      const todo = Object.values(gdata.stu).filter(s => s.d && !gdata.map[s.id]);
-      if (!todo.length) return msg('Semua siswa yang sudah tes sudah punya kelompok.');
-      toast('Membentuk kelompok…'); let n = 0;
-      for (const s of todo.sort((a, b) => (a.k + a.n).localeCompare(b.k + b.n))) { const id = await placeStudent(s.id, s.n, s.k, effL(s)); if (id) n++; }
-      sfx('mission'); msg(n + ' siswa ditempatkan.'); gReload();
+    function autoForm() {
+      const allStu = Object.values(gdata.stu);
+      const sudahTes = allStu.filter(s => s.d && !gdata.map[s.id]);
+      const belumTes = allStu.filter(s => !s.d && !gdata.map[s.id]);
+      const sudahPunya = allStu.filter(s => gdata.map[s.id]);
+      if (!sudahTes.length && !belumTes.length) return msg('Semua siswa sudah punya kelompok.');
+      // Modal pilihan
+      PP.ui.modal(`<h3>⚙ Bentuk Kelompok Otomatis</h3>
+        <p class="small">Pilih siswa yang akan ditempatkan ke kelompok:</p>
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <input type="checkbox" id="afSudah" ${sudahTes.length ? 'checked' : 'disabled'}>
+            <span>Siswa sudah tes (${sudahTes.length} orang) — ditempatkan sesuai level tes</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <input type="checkbox" id="afBelum" ${belumTes.length ? '' : 'disabled'}>
+            <span>Siswa belum tes (${belumTes.length} orang) — pilih level default:</span>
+          </label>
+          <div style="margin-left:28px;margin-bottom:4px">
+            <select id="afLv" class="ab-inp">
+              <option value="a">A · ${L.LV.a.nama}</option>
+              <option value="b" selected>B · ${L.LV.b.nama}</option>
+              <option value="c">C · ${L.LV.c.nama}</option>
+            </select>
+          </div>
+          <p class="small muted" style="margin-left:28px">Siswa sudah punya kelompok: ${sudahPunya.length} orang (tidak diubah)</p>
+        </div>
+        <div class="row end"><button class="btn" data-close>Batal</button><button class="btn green" id="afOk">Bentuk sekarang</button></div>`);
+      $('#afBelum').onchange = e => { $('#afLv').disabled = !e.target.checked; };
+      $('#afLv').disabled = true;
+      $('#afOk').onclick = async () => {
+        const incSudah = $('#afSudah').checked, incBelum = $('#afBelum').checked, lvDef = $('#afLv').value;
+        if (!incSudah && !incBelum) { toast('Pilih minimal satu kelompok siswa.', 'x'); return; }
+        PP.ui.close(); toast('Membentuk kelompok…'); let n = 0;
+        const todo = [];
+        if (incSudah) todo.push(...sudahTes);
+        if (incBelum) todo.push(...belumTes.map(s => Object.assign({}, s, { _lvDef: lvDef })));
+        for (const s of todo.sort((a, b) => (a.k + a.n).localeCompare(b.k + b.n))) {
+          const lv = effL(s) || s._lvDef || 'b';
+          const id = await placeStudent(s.id, s.n, s.k, lv);
+          if (id) n++;
+        }
+        sfx('mission'); msg(n + ' siswa ditempatkan.'); gReload();
+      };
     }
 
     /* ---- PANTAU ---- */
