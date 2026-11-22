@@ -43,7 +43,16 @@
     guru5: { name: 'Bu Guru',    idle: 'guru_cewek_kaca_0',walk: ['guru_cewek_kaca_0','guru_cewek_kaca_1']}
   };
   PP.GURU_ORDER = ['guru0', 'guru1', 'guru2', 'guru3', 'guru4', 'guru5'];
-  PP.registered = () => !!(S.data.registered && S.data.name && S.data.kelas && S.data.sekolah && (PP.AV[S.data.avatar] || PP.AV_GURU[S.data.avatar]));
+  PP.registered = () => {
+    const d = S.data;
+    if (!d.registered || !d.name) return false;
+    const hasAv = !!(PP.AV[d.avatar] || PP.AV_GURU[d.avatar]);
+    if (!hasAv) return false;
+    // Akun guru: kelas & sekolah tidak wajib
+    if (PP.AV_GURU[d.avatar]) return true;
+    // Akun siswa: kelas & sekolah wajib
+    return !!(d.kelas && d.sekolah);
+  };
   PP.me = () => PP.AV[S.data.avatar] || PP.AV_GURU[S.data.avatar] || PP.AV.boy;
   PP.nm = () => S.data.name || 'Petualang';
   PP.walk = function (img, frames, ms) {            // animasi jalan sederhana; return fungsi stop
@@ -812,7 +821,7 @@
   PP.screens['upload-soal'] = function () {
     const isGuru = PP.AV_GURU[S.data.avatar];
     if (!isGuru) {
-      return { html: `<div class="wrap narrow"><div class="panel pad center"><h2 class="h-title">🔒 Fitur Khusus Guru</h2><p>Fitur upload soal hanya bisa digunakan oleh akun guru.</p><p class="muted small">Login dengan karakter guru di halaman profil.</p><div class="row center"><button class="btn green" data-go="profil">Ke Profil</button><button class="btn" data-act="back">Kembali</button></div></div></div>` };
+      return { html: `<div class="wrap narrow"><div class="panel pad center"><h2 class="h-title">🔒 Fitur Khusus Guru</h2><p>Fitur upload soal hanya bisa digunakan oleh akun guru.</p><p class="muted small">Pilih karakter guru di halaman profil.</p><div class="row center"><button class="btn green" data-go="profil">Ke Profil</button><button class="btn" data-act="back">Kembali</button></div></div></div>` };
     }
     // Ambil soal yang sudah diupload
     const KEY_US = 'pp_upload_soal_v1';
