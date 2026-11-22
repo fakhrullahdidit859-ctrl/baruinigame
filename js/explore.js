@@ -542,7 +542,7 @@
             else if (pol) PPArt.draw(ctx, 'polisi', Math.floor(n.t * 6) % 8, n.x, n.y, { flip: n.f < 0 });
             else { const spr = owl ? OWLF[Math.floor(n.t * 5) % 4] : n.spr; PP.Life.drawHuman(ctx, imgs[spr] || imgs[n.spr], spr, n.x, n.y - lift, h, n.f, n.t, owl ? 0 : n.amp, null, n.outfit || ''); }
             label(n.name, n.x, n.y - h - 18 - (owl ? 8 * K : 0), '#fff');
-            if (lt && life.mark) life.mark(ctx, n, n.x, n.y - h - 30, !!ex.solved[n.q], time); else if (ex.solved[n.q]) badge(n.x, n.y - h - 6 - (owl ? 8 * K : 0), '✓', '#8fe07a'); else badge(n.x, n.y - h - 6 - (owl ? 8 * K : 0) + Math.sin(time * 5) * 2, '!', '#ffd34d');
+            if (lt && life.mark) life.mark(ctx, n, n.x, n.y - h - 30, !!ex.solved[n.q], time);
           } });
           if (ex.equip.owl) list.push({ y: pet.y, f: () => { shadow(pet.x, pet.y, 8); drawImg('owl_0', pet.x, pet.y - 6 + Math.sin(time * 6) * 2, 26); } });
           if (SV) for (const o of SV.nearby(wi)) {
