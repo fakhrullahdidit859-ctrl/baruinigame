@@ -12,17 +12,20 @@
   const num = (v, max) => Math.max(0, Math.min(max, Math.round(+v || 0)));
   R.mine = function () {
     const d = S().data, g = k => d.games[k] ? d.games[k].best : -1, ex = d.explore || {};
+    const mg = d.miniGames || {};
     const gs = ['A', 'B', 'C', 'D'].map(g).filter(v => v >= 0);
     const o = {
       n: clean(d.name).slice(0, 40) || 'Pemain', k: clean(d.kelas).replace(/\s+/g, '').toUpperCase().slice(0, 12), sk: clean(d.sekolah).slice(0, 60),
       q: d.quiz && d.quiz.best ? num(d.quiz.best.score, 100) : -1, qa: num(d.quiz && d.quiz.attempts, 999),
       ga: g('A'), gb: g('B'), gc: g('C'), gd: g('D'), gr: gs.length ? Math.round(gs.reduce((a, b) => a + b, 0) / gs.length) : -1,
+      gp: mg.pesawat ? num(mg.pesawat.best, 999999) : -1,
+      gt: mg.tetris ? num(mg.tetris.best, 999999) : -1,
       pos: S().doneCount(), jb: jbDone(), ex: num(Object.keys(ex.solved || {}).length, 9999),
       st: num(S().totalStars(), 1000), xp: num(d.xp, 1000000), lv: num(S().level(), 1000), co: num(ex.coins, 1000000),
       tc: num(d.tally && d.tally.correct, 100000), tw: num(d.tally && d.tally.wrong, 100000), bd: num(Object.keys(d.badges || {}).length + Object.keys((d.lomba && d.lomba.badges) || {}).length, 200),
       rf: d.reflection ? 1 : 0, fn: num(S().finalScore(), 100), hn: num(d.quizHints && d.quizHints.total, 999), ts: Date.now()
     };
-    ['ga', 'gb', 'gc', 'gd'].forEach(k => { if (o[k] < 0) o[k] = -1; });
+    ['ga', 'gb', 'gc', 'gd', 'gp', 'gt'].forEach(k => { if (o[k] < 0) o[k] = -1; });
     return o;
   };
   let timer = 0, lastJson = '', pushRetry = 0;
@@ -63,6 +66,7 @@
   };
   R.HEAD = [
     ['n', 'Nama'], ['k', 'Kelas'], ['q', 'Kuis (terbaik)'], ['qa', 'Percobaan kuis'], ['ga', 'Game A Susun Segitiga'], ['gb', 'Game B Temukan Sisi'], ['gc', 'Game C Misi Jembatan'], ['gd', 'Game D Tantangan Akhir'], ['gr', 'Rata-rata game'],
+    ['gp', 'Pesawat Pemburu (skor)'], ['gt', 'Tetris Pythagoras (skor)'],
     ['pos', 'Pos misi (dari 6)'], ['jb', 'Jalur Belajar (dari 6)'], ['ex', 'Soal Jelajah dijawab'], ['st', 'Bintang'], ['tc', 'Jawaban benar'], ['tw', 'Jawaban salah'], ['hn', 'Petunjuk dipakai'],
     ['xp', 'XP'], ['lv', 'Level'], ['co', 'Koin'], ['bd', 'Lencana'], ['rf', 'Refleksi'], ['lkl', 'Level LKPD'], ['lkn', 'Nilai LKPD Proyek'], ['fn', 'Nilai akhir'], ['pr', 'Predikat'], ['H', 'Hadir'], ['I', 'Izin'], ['S', 'Sakit'], ['A', 'Alpa'], ['pct', '% Hadir'], ['ts', 'Terakhir aktif']
   ];
@@ -71,7 +75,7 @@
     const v = r[k], neg = x => (x < 0 ? '' : x);
     switch (k) {
       case 'k': return v ? v.slice(0, 1) + ' ' + v.slice(1) : '';
-      case 'q': case 'ga': case 'gb': case 'gc': case 'gd': case 'gr': return neg(v);
+      case 'q': case 'ga': case 'gb': case 'gc': case 'gd': case 'gr': case 'gp': case 'gt': return neg(v);
       case 'rf': return v ? 'Sudah' : 'Belum';
       case 'pr': return S().predikat(r.fn || 0).t;
       case 'H': case 'I': case 'S': case 'A': return r.att ? r.att[k] : '';
