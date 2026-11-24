@@ -137,7 +137,7 @@
     while (prev && /^(splash|)$/.test(prev)) prev = navTrail.pop();
     PP.go(prev || 'menu');
   };
-  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
+  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', game_pesawat: 'Pesawat Pemburu', game_tetris: 'Tetris Pythagoras', rangka3d: 'Rangka Atap 3D', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
     games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH',
     'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun' };
 
