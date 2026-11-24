@@ -10,6 +10,7 @@
       v: 1, name: '', kelas: '', sekolah: '', registered: false, avatar: 'boy', created: Date.now(),
       xp: 0, badges: {}, missions: {}, finish: false,
       games: { A: null, B: null, C: null, D: null },
+      miniGames: { pesawat: null, tetris: null },
       quiz: { best: null, last: null, attempts: 0, draft: null, timerMin: 15 },
       tally: { correct: 0, wrong: 0 },
       materiSeen: {}, explored: 0,
@@ -85,6 +86,21 @@
     return stars;
   };
   S.tallyAnswer = function (ok) { ok ? S.data.tally.correct++ : S.data.tally.wrong++; };
+
+  /* ---------- mini-game (pesawat, tetris) ---------- */
+  S.recordMiniGame = function (gid, skor, combo) {
+    if (!S.data.miniGames) S.data.miniGames = {};
+    const prev = S.data.miniGames[gid] || { best: 0, plays: 0, bestCombo: 0, lastScore: 0 };
+    prev.plays++; prev.lastScore = skor;
+    prev.best = Math.max(prev.best, skor);
+    if (combo != null) prev.bestCombo = Math.max(prev.bestCombo || 0, combo);
+    prev.date = Date.now();
+    S.data.miniGames[gid] = prev;
+    S.save();
+    S.addXP(Math.min(30, Math.round(skor / 10)), true);
+    return prev.best;
+  };
+  S.miniGameBest = gid => (S.data.miniGames && S.data.miniGames[gid]) ? S.data.miniGames[gid].best : -1;
 
   /* ---------- lencana ---------- */
   S.award = function (id, silent) {
