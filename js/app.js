@@ -137,7 +137,7 @@
     while (prev && /^(splash|)$/.test(prev)) prev = navTrail.pop();
     PP.go(prev || 'menu');
   };
-  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', game_pesawat: 'Pesawat Pemburu', game_tetris: 'Tetris Pythagoras', rangka3d: 'Rangka Atap 3D', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
+  const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', game_pesawat: 'Pesawat Pemburu', game_tetris: 'Tetris Pythagoras', rangka3d: 'Rangka Atap 3D', materi_hub: 'Materi Pembelajaran', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
     games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH',
     'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun' };
 
@@ -182,8 +182,8 @@
   }
 
   /* ---------- HUD + dock ---------- */
-  const DOCK = [['menu', 'Beranda', 'home'], ['peta', 'Peta', 'map'], ['materi', 'Materi', 'book'], ['games', 'Game', 'game'], ['kuis', 'Kuis', 'quiz'], ['jelajah', 'Jelajah', 'explore'], ['nilai', 'Nilai', 'trophy']];
-  const DOCK_ON = { integrasi: 'menu', offline: 'menu', lkpd: 'menu', buku: 'menu', rekap: 'menu', lomba: 'menu', misi: 'menu', toko: 'menu', lencana: 'menu', buatsoal: 'menu', laporan: 'menu', pendahuluan: 'menu', absen: 'menu', planning: 'menu', jalur: 'menu', menu: 'menu', tujuan: 'menu', video: 'menu', eksplorasi: 'menu', refleksi: 'menu', petunjuk: 'menu', profil: 'menu', 'profil-guru': 'menu', finish: 'menu', peta: 'peta', pos: 'peta', materi: 'materi', games: 'games', game: 'games', kuis: 'kuis', jelajah: 'jelajah', papan: 'nilai', nilai: 'nilai' };
+  const DOCK = [['menu', 'Beranda', 'home'], ['peta', 'Peta', 'map'], ['materi_hub', 'Materi', 'book'], ['games', 'Game', 'game'], ['kuis', 'Kuis', 'quiz'], ['jelajah', 'Jelajah', 'explore'], ['nilai', 'Nilai', 'trophy']];
+  const DOCK_ON = { integrasi: 'menu', offline: 'menu', lkpd: 'menu', buku: 'menu', rekap: 'menu', lomba: 'menu', misi: 'menu', toko: 'menu', lencana: 'menu', buatsoal: 'menu', laporan: 'menu', pendahuluan: 'menu', absen: 'menu', planning: 'menu', jalur: 'menu', menu: 'menu', tujuan: 'menu', video: 'menu', eksplorasi: 'menu', refleksi: 'menu', petunjuk: 'menu', profil: 'menu', 'profil-guru': 'menu', finish: 'menu', peta: 'peta', pos: 'peta', materi: 'materi', materi_hub: 'materi', games: 'games', game: 'games', kuis: 'kuis', jelajah: 'jelajah', papan: 'nilai', nilai: 'nilai' };
   function buildDock() {
     PP.$('#dock').innerHTML = DOCK.map(d => `<button class="dk" data-go="${d[0]}" data-k="${d[0]}" aria-label="${d[1]}">${PP.ico(d[2])}<span>${d[1]}</span></button>`).join('');
   }
@@ -601,7 +601,7 @@
       ['pendahuluan', 'Kegiatan Pendahuluan', 'Doa, kesepakatan, lagu, absen.', 'pendahuluan', 'c12'],
       ['tujuan', 'Tujuan Pembelajaran', 'Apa yang akan kamu kuasai.', 'tujuan', 'c1'],
       ['peta', 'Peta Petualangan', 'Enam pos misi menuju FINISH.', 'peta', 'c2'],
-      ['materi', 'Materi Pembelajaran', 'Konsep, contoh, dan penerapan.', 'materi', 'c3'],
+      ['materi_hub', 'Materi Pembelajaran', 'Konsep, contoh, dan penerapan.', 'materi', 'c3'],
       ['buku', 'Buku Digital', 'Baca seperti buku asli.', 'materi', 'c14'],
       ['video', 'Video Animasi', 'Tonton penjelasan bergerak.', 'video', 'c4'],
       ['eksplorasi', 'Eksplorasi Pythagoras', 'Ubah sisi, lihat luas persegi.', 'eksplorasi', 'c5'],
@@ -642,7 +642,7 @@
       <h2 class="h-title">Tujuan Pembelajaran</h2>
       <p class="small" style="margin:0">Setelah mengikuti pembelajaran ini, kamu diharapkan mampu:</p>
       <ol class="goals">${PP.TUJUAN.map((g, i) => `<li style="--i:${i}"><span class="g-n">${i + 1}</span><span class="g-ic">${PP.ico(['book', 'clock', 'sides', 'puzzle', 'calc', 'shapes', 'bulb'][i % 7], 'big')}</span><div><b>${g.t}</b><p>${g.d}</p></div></li>`).join('')}</ol>
-      <div class="row center"><button class="btn green" data-go="peta">Ke Peta Petualangan</button><button class="btn" data-go="materi">Buka Materi</button></div></div></div>` };
+      <div class="row center"><button class="btn green" data-go="peta">Ke Peta Petualangan</button><button class="btn" data-go="materi_hub">Buka Materi</button></div></div></div>` };
   };
 
   /* =====================================================
