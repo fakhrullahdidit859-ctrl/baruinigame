@@ -25,7 +25,39 @@
         <div class="gc-stat">${g ? PP.stars(g.stars) + `<span class="pill">Terbaik ${g.best}</span><span class="pill">${g.plays}×</span>` : '<span class="muted small">Belum dimainkan</span>'}</div>
         <button class="btn green sm" data-go="game-${k}">Main Game ${k}</button></div>`;
     }).join('');
-    return { html: `<div class="wrap"><div class="panel pad-s" style="flex:none"><h2 class="h-title" style="margin:0">Game dan Tantangan</h2></div><div class="game-grid">${cards}</div></div>` };
+
+    /* Kartu mini-game bonus */
+    const miniCards = [
+      { key: 'game_pesawat', label: '✈ Pesawat Pemburu', desc: 'Tembak jawaban Pythagoras yang benar! Pilih tripel yang tepat sebelum musuh melintas.', color: '#2563eb' },
+      { key: 'game_tetris',  label: '🧩 Tetris Pythagoras', desc: 'Susun blok sehingga a²+b²=c² terpenuhi dan baris meledak!', color: '#7c3aed' }
+    ].map(m => {
+      const mg = (S.data.miniGames || {})[m.key === 'game_pesawat' ? 'pesawat' : 'tetris'];
+      const stat = mg ? `<span class="pill">Terbaik ${mg.best}</span>` : '<span class="muted small">Belum dimainkan</span>';
+      return `<div class="panel game-card" style="border-top:4px solid ${m.color}">
+        <div class="gc-top"><span class="gc-l" style="background:${m.color};font-size:20px;width:40px;height:40px;">${m.label.split(' ')[0]}</span>
+        <div><h3>${m.label.replace(/^.\s/, '')}</h3><p class="small muted">Mini-game bonus</p></div></div>
+        <p class="desc">${m.desc}</p>
+        <div class="gc-stat">${stat}</div>
+        <button class="btn sm" style="background:${m.color};color:#fff;" data-mini="${m.key}">Main Sekarang</button>
+      </div>`;
+    }).join('');
+
+    const inst = {
+      html: `<div class="wrap"><div class="panel pad-s" style="flex:none"><h2 class="h-title" style="margin:0">Game dan Tantangan</h2></div>
+        <div class="game-grid">${cards}</div>
+        <div class="panel pad-s" style="margin-top:8px;flex:none"><h3 style="margin:0 0 8px;">🎮 Mini-Game Bonus</h3></div>
+        <div class="game-grid">${miniCards}</div></div>`,
+      mount(root) {
+        root.querySelectorAll('[data-mini]').forEach(btn => {
+          btn.onclick = () => {
+            const k = btn.dataset.mini;
+            if (PP.screens[k]) PP.go(k);
+            else PP.ui.toast('Mini-game belum termuat. Coba muat ulang halaman.');
+          };
+        });
+      }
+    };
+    return inst;
   };
 
   /* ---------- pembungkus game ---------- */
