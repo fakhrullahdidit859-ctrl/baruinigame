@@ -157,7 +157,7 @@
           btn.addEventListener('click', () => {
             const r = btn.dataset.mh;
             if (r.startsWith('materi/')) {
-              PP.go('materi', r.split('/')[1]);
+              PP.go('materi-' + r.split('/')[1]);
             } else {
               PP.go(r);
             }
