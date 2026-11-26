@@ -11,9 +11,6 @@
     ['lencana', 'Koleksi Lencana', 'Lencana yang sudah kamu dapat.', 'ikon_koleksi_lencana'],
     ['toko', 'Toko Kostum', 'Tukar koin, pakai di karakter.', 'ikon_toko_kostum'],
     ['buatsoal', 'Buat Soal', 'Soal buatan jadi warga di Jelajah.', 'ikon_buat_soal'],
-    ['game_pesawat', '✈ Pesawat Pemburu', 'Tembak jawaban Pythagoras yang benar!', 'ikon_buat_soal'],
-    ['game_tetris', '🧩 Tetris Pythagoras', 'Susun tripel a²+b²=c² untuk meledak!', 'ikon_misi_harian'],
-    ['rangka3d', '🏗 Rangka Atap 3D', 'Model 3D miniatur rangka atap interaktif.', 'ikon_buat_soal'],
     ['a11y', 'Aksesibilitas', 'Suara, huruf, kontras, gerak.', 'ikon_aksesibilitas']
   ];
   PP.screens.lomba = function () {
