@@ -139,7 +139,7 @@
   };
   const TITLES = { 'profil-guru': 'Profil Guru', integrasi: 'Integrasi Platform', offline: 'Mode Offline', lkpd: 'LKPD Proyek', buku: 'Buku Digital', rekap: 'Rekap Nilai', lomba: 'Rekap dan Upload', game_pesawat: 'Pesawat Pemburu', game_tetris: 'Tetris Pythagoras', rangka3d: 'Rangka Atap 3D', materi_hub: 'Materi Pembelajaran', misi: 'Misi Harian', toko: 'Toko Kostum', lencana: 'Koleksi Lencana', buatsoal: 'Buat Soal', laporan: 'Sertifikat & Rapor', pendahuluan: 'Kegiatan Pendahuluan', absen: 'Absen Kehadiran', planning: 'Planning Pembelajaran', jalur: 'Jalur Belajar', menu: 'Menu Utama', tujuan: 'Tujuan Pembelajaran', peta: 'Peta Petualangan', materi: 'Materi Pembelajaran', video: 'Video Animasi', eksplorasi: 'Eksplorasi Pythagoras',
     games: 'Game dan Tantangan', jelajah: 'Jelajah Dunia', papan: 'Papan Peringkat', game: 'Game', kuis: 'Kuis Interaktif', refleksi: 'Refleksi', nilai: 'Program Penilaian', petunjuk: 'Petunjuk', profil: 'Profil', pos: 'Pos Petualangan', finish: 'FINISH',
-    'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun' };
+    'upload-soal': 'Upload Soal', pengaturan: 'Pengaturan Akun', presentasi: 'Presentasi Kelas' };
 
   function render() {
     const r = parse();
@@ -183,7 +183,7 @@
 
   /* ---------- HUD + dock ---------- */
   const DOCK = [['menu', 'Beranda', 'home'], ['peta', 'Peta', 'map'], ['materi_hub', 'Materi', 'book'], ['games', 'Game', 'game'], ['kuis', 'Kuis', 'quiz'], ['jelajah', 'Jelajah', 'explore'], ['nilai', 'Nilai', 'trophy']];
-  const DOCK_ON = { integrasi: 'menu', offline: 'menu', lkpd: 'menu', buku: 'menu', rekap: 'menu', lomba: 'menu', misi: 'menu', toko: 'menu', lencana: 'menu', buatsoal: 'menu', laporan: 'menu', pendahuluan: 'menu', absen: 'menu', planning: 'menu', jalur: 'menu', menu: 'menu', tujuan: 'menu', video: 'menu', eksplorasi: 'menu', refleksi: 'menu', petunjuk: 'menu', profil: 'menu', 'profil-guru': 'menu', finish: 'menu', peta: 'peta', pos: 'peta', materi: 'materi', materi_hub: 'materi', games: 'games', game: 'games', kuis: 'kuis', jelajah: 'jelajah', papan: 'nilai', nilai: 'nilai' };
+  const DOCK_ON = { integrasi: 'menu', offline: 'menu', lkpd: 'menu', buku: 'menu', rekap: 'menu', lomba: 'menu', presentasi: 'menu', misi: 'menu', toko: 'menu', lencana: 'menu', buatsoal: 'menu', laporan: 'menu', pendahuluan: 'menu', absen: 'menu', planning: 'menu', jalur: 'menu', menu: 'menu', tujuan: 'menu', video: 'menu', eksplorasi: 'menu', refleksi: 'menu', petunjuk: 'menu', profil: 'menu', 'profil-guru': 'menu', finish: 'menu', peta: 'peta', pos: 'peta', materi: 'materi', materi_hub: 'materi', games: 'games', game: 'games', kuis: 'kuis', jelajah: 'jelajah', papan: 'nilai', nilai: 'nilai' };
   function buildDock() {
     PP.$('#dock').innerHTML = DOCK.map(d => `<button class="dk" data-go="${d[0]}" data-k="${d[0]}" aria-label="${d[1]}">${PP.ico(d[2])}<span>${d[1]}</span></button>`).join('');
   }
@@ -615,6 +615,7 @@
       ['integrasi', 'Integrasi Platform', 'Canva, AI Studio, Zeepquiz, Wordwall.', 'm_integrasi', 'c16'],
       ['offline', 'Mode Offline', 'Pasang & mainkan tanpa internet.', 'm_offline', 'c17'],
       ['lomba', 'Rekap dan Upload', 'Rekap, misi, toko, sertifikat.', 'lomba', 'c13'],
+      ['presentasi', 'Presentasi Kelas', 'Upload foto, video, dan dokumen.', 'lomba', 'c20'],
       ['pengaturan', 'Pengaturan Akun', 'Ubah nama, kata sandi, kode guru.', 'pengaturan', 'c19']
     ];
     const visibleCards = cards;
