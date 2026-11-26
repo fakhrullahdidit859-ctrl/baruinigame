@@ -15,45 +15,51 @@
     D: { name: 'Tantangan Akhir', desc: 'Soal campuran dari seluruh materi. Kamu punya tiga nyawa.', how: ['10 soal acak dari seluruh materi.', 'Setiap jawaban salah mengurangi satu nyawa. Nyawa habis, permainan berakhir.', 'Setiap jawaban benar bernilai 10.'], bgm: 'Musik: Minigame 2 (Race)' }
   };
 
-  /* ---------- menu game ---------- */
+  /* ---------- menu game — grid ikon kompak, semua terlihat tanpa scroll ---------- */
   PP.screens.games = function () {
-    const cards = ['A', 'B', 'C', 'D'].map(k => {
-      const g = S.data.games[k], pos = PP.POS.find(p => p.game === k), m = META[k];
-      const st = S.missionDone(pos.id) ? 'selesai' : S.missionUnlocked(pos.id) ? 'terbuka' : 'terkunci';
-      return `<div class="panel game-card"><div class="gc-top"><span class="gc-l">${k}</span><div><h3>${m.name}</h3><p class="small muted">Misi Pos ${pos.id} (${st})</p></div></div>
-        <p class="desc">${m.desc}</p>
-        <div class="gc-stat">${g ? PP.stars(g.stars) + `<span class="pill">Terbaik ${g.best}</span><span class="pill">${g.plays}×</span>` : '<span class="muted small">Belum dimainkan</span>'}</div>
-        <button class="btn green sm" data-go="game-${k}">Main Game ${k}</button></div>`;
-    }).join('');
+    const ALL = [
+      { go: 'game-A', icon: '🔺', name: 'Susun Segitiga',     sub: 'Game A', color: '#16a34a' },
+      { go: 'game-B', icon: '📏', name: 'Panjang Sisi',       sub: 'Game B', color: '#0284c7' },
+      { go: 'game-C', icon: '🌉', name: 'Misi Jembatan',      sub: 'Game C', color: '#d97706' },
+      { go: 'game-D', icon: '⚡', name: 'Tantangan Akhir',    sub: 'Game D', color: '#dc2626' },
+      { mini: 'game_pesawat', icon: '✈️', name: 'Pesawat Pemburu',  sub: 'Bonus',  color: '#2563eb' },
+      { mini: 'game_tetris',  icon: '🧩', name: 'Tetris Pythagoras', sub: 'Bonus', color: '#7c3aed' }
+    ];
 
-    /* Kartu mini-game bonus */
-    const miniCards = [
-      { key: 'game_pesawat', label: '✈ Pesawat Pemburu', desc: 'Tembak jawaban Pythagoras yang benar! Pilih tripel yang tepat sebelum musuh melintas.', color: '#2563eb' },
-      { key: 'game_tetris',  label: '🧩 Tetris Pythagoras', desc: 'Susun blok sehingga a²+b²=c² terpenuhi dan baris meledak!', color: '#7c3aed' }
-    ].map(m => {
-      const mg = (S.data.miniGames || {})[m.key === 'game_pesawat' ? 'pesawat' : 'tetris'];
-      const stat = mg ? `<span class="pill">Terbaik ${mg.best}</span>` : '<span class="muted small">Belum dimainkan</span>';
-      return `<div class="panel game-card" style="border-top:4px solid ${m.color}">
-        <div class="gc-top"><span class="gc-l" style="background:${m.color};font-size:20px;width:40px;height:40px;">${m.label.split(' ')[0]}</span>
-        <div><h3>${m.label.replace(/^.\s/, '')}</h3><p class="small muted">Mini-game bonus</p></div></div>
-        <p class="desc">${m.desc}</p>
-        <div class="gc-stat">${stat}</div>
-        <button class="btn sm" style="background:${m.color};color:#fff;" data-mini="${m.key}">Main Sekarang</button>
-      </div>`;
-    }).join('');
+    const cardHTML = ALL.map(m => `
+      <button class="gx-card" data-go="${m.go || ''}" data-mini="${m.mini || ''}" style="
+        background:${m.color};color:#fff;border:none;border-radius:14px;
+        padding:14px 8px 12px;cursor:pointer;display:flex;flex-direction:column;
+        align-items:center;gap:6px;box-shadow:0 3px 10px rgba(0,0,0,.2);
+        transition:transform .15s;width:100%;">
+        <span style="font-size:34px;line-height:1;">${m.icon}</span>
+        <b style="font-size:12px;line-height:1.3;text-align:center;">${m.name}</b>
+        <span style="font-size:10px;opacity:.8;background:rgba(0,0,0,.2);border-radius:20px;padding:2px 8px;">${m.sub}</span>
+      </button>`).join('');
 
     const inst = {
-      html: `<div class="wrap"><div class="panel pad-s" style="flex:none"><h2 class="h-title" style="margin:0">Game dan Tantangan</h2></div>
-        <div class="game-grid">${cards}</div>
-        <div class="panel pad-s" style="margin-top:8px;flex:none"><h3 style="margin:0 0 8px;">🎮 Mini-Game Bonus</h3></div>
-        <div class="game-grid">${miniCards}</div></div>`,
+      html: `<div class="wrap narrowish">
+        <div class="panel pad-s" style="flex:none;margin-bottom:10px;">
+          <h2 class="h-title" style="margin:0">🎮 Game dan Tantangan</h2>
+          <p class="small muted" style="margin:4px 0 0;">Ketuk kartu untuk mulai bermain.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 2px;">
+          ${cardHTML}
+        </div>
+        <p style="text-align:right;color:#aaa;font-size:11px;padding:10px 0 4px;">Made by Didit Fakhrullah</p>
+      </div>`,
       mount(root) {
-        root.querySelectorAll('[data-mini]').forEach(btn => {
-          btn.onclick = () => {
-            const k = btn.dataset.mini;
-            if (PP.screens[k]) PP.go(k);
-            else PP.ui.toast('Mini-game belum termuat. Coba muat ulang halaman.');
-          };
+        root.querySelectorAll('.gx-card').forEach(btn => {
+          btn.addEventListener('mouseenter', () => btn.style.transform = 'scale(1.04)');
+          btn.addEventListener('mouseleave', () => btn.style.transform = '');
+          btn.addEventListener('click', () => {
+            const go = btn.dataset.go, mini = btn.dataset.mini;
+            if (go) { PP.go(go); }
+            else if (mini) {
+              if (PP.screens[mini]) PP.go(mini);
+              else PP.ui.toast('Mini-game belum termuat. Muat ulang halaman.');
+            }
+          });
         });
       }
     };
