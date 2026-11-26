@@ -476,7 +476,46 @@
     { sides:[9,40,41], color:'#2dd4bf', dark:'#0f6b60' },
   ];
 
-  function acakPiece() { return { ...PIECES[Math.floor(Math.random()*PIECES.length)], rot:Math.floor(Math.random()*4) }; }
+  function acakPiece(grid) {
+    // Tanpa grid: acak biasa
+    if (!grid) return { ...PIECES[Math.floor(Math.random()*PIECES.length)], rot: 0 };
+
+    // Kumpulkan semua nilai yang sudah ada di grid
+    const vals = [];
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (grid[r][c]) vals.push(grid[r][c].val);
+
+    // Cari nilai yang bisa melengkapi tripel dari yang sudah ada
+    const needed = [];
+    for (const t of TRIPEL) {
+      const sorted = [...t].sort((a,b)=>a-b);
+      for (let i = 0; i < sorted.length; i++) {
+        const other = sorted.filter((_,j)=>j!==i);
+        // jika kedua nilai lainnya sudah ada di grid
+        if (other.every(v => vals.includes(v))) needed.push(sorted[i]);
+      }
+      // jika satu nilai sudah ada, coba berikan salah satu yang cocok
+      for (let i = 0; i < sorted.length; i++) {
+        if (vals.includes(sorted[i])) {
+          sorted.filter((_,j)=>j!==i).forEach(v => needed.push(v));
+        }
+      }
+    }
+
+    // 60% chance: beri yang dibutuhkan; 40%: acak
+    if (needed.length && Math.random() < 0.60) {
+      const target = needed[Math.floor(Math.random()*needed.length)];
+      for (const p of PIECES) {
+        if (p.sides.includes(target)) {
+          const rot = p.sides.indexOf(target);
+          return { ...p, rot };
+        }
+      }
+    }
+    // fallback acak tapi mulai dari rot 0
+    return { ...PIECES[Math.floor(Math.random()*PIECES.length)], rot: 0 };
+  }
 
   PP.screens.game_tetris = function () {
     return {
@@ -517,10 +556,10 @@
     // Grid: null atau { color, dark, val }
     let grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(null));
     let cur = null, curX = 0, curY = 0;
-    let next = acakPiece();
+    let next = acakPiece(null);
     let poin = 0, level = 1, lines = 0;
     let running = true, gameOver = false;
-    let dropTimer = 0, dropInterval = 50;
+    let dropTimer = 0, dropInterval = 90; // lebih lambat di awal
     let flash = []; // { r, c, t }
 
     function newPiece() {
