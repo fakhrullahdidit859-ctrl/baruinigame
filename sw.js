@@ -1,76 +1,68 @@
-/* Service worker Petualangan Pythagoras — membuat game bisa dipakai tanpa internet.
-   Daftar berkas dibaca dari precache.json (dibuat oleh tools_build_pwa.py).
-   Jangan diubah tiap rilis: cukup jalankan ulang tools_build_pwa.py. */
-const PREFIX = 'pp-offline-';
-const VERSION = 'b9b27e390442';   // diisi otomatis oleh tools_build_pwa.py (membuat sw.js berubah => peramban tahu ada pembaruan)
-const CACHE = PREFIX + VERSION;
-const sendAll = async msg => { for (const c of await self.clients.matchAll({ includeUncontrolled: true })) c.postMessage(msg); };
-
+/* =========================================================
+   SERVICE WORKER — Petualangan Pythagoras (PWA, offline)
+   Strategi:
+   - Pasang: simpan inti aplikasi (HTML, CSS, semua JS, ikon).
+   - Halaman (navigasi): jaringan dulu, jika gagal pakai salinan tersimpan.
+   - Berkas aset (gambar, suara, video): salinan tersimpan dulu, lalu jaringan (dan disimpan).
+   - Video/suara mendukung permintaan Range (agar bisa diputar/digeser dari cache).
+   - Font Google: stale-while-revalidate.
+   - Firebase / database / API lain: TIDAK pernah disimpan (selalu jaringan).
+   - Pesan {type:'CACHE_ALL', urls:[...]} dari halaman = unduh semua aset untuk offline.
+   Naikkan VERSION setiap kali kode/aset berubah agar cache lama diganti.
+   ========================================================= */
+const VERSION = 'pp-v28';
+const CORE = CORE_LIST();
+function CORE_LIST() {
+  return ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+}
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
-    const man = await (await fetch('precache.json', { cache: 'no-store' })).json();
-    const cache = await caches.open(CACHE);
-    const files = man.files; let done = 0, i = 0;
-    const one = async u => {
-      for (let t = 0; t < 3; t++) {
-        try { const r = await fetch(u, { cache: 'reload' }); if (r.ok) { await cache.put(u, r); return; } if (r.status === 404 || r.status === 410) return; /* berkas sudah tidak ada di repo: lewati */ } catch (_) {}
-      }
-      throw new Error('gagal unduh ' + u);
-    };
-    const worker = async () => { while (i < files.length) { const u = files[i++]; await one(u); done++; if (done % 8 === 0 || done === files.length) sendAll({ type: 'pp-progress', done, total: files.length }); } };
-    await Promise.all([worker(), worker(), worker(), worker()]);
+    const c = await caches.open(VERSION);
+    let list = CORE.slice();
+    try { const r = await fetch('pp-assets.json', { cache: 'no-store' }); const j = await r.json(); list = j.core || list; } catch (x) { }
+    await Promise.allSettled(list.map(u => c.add(new Request(u, { cache: 'reload' }))));
+    self.skipWaiting();
   })());
 });
-
 self.addEventListener('activate', e => {
-  e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k.startsWith(PREFIX) && k !== CACHE) await caches.delete(k);
-    await self.clients.claim();
-    sendAll({ type: 'pp-ready' });
-  })());
+  e.waitUntil((async () => { for (const k of await caches.keys()) if (k.startsWith('pp-') && k !== VERSION) await caches.delete(k); await self.clients.claim(); })());
 });
-
-self.addEventListener('message', e => { if (e.data === 'pp-skip') self.skipWaiting(); });
-
-/* Layani permintaan Range (video/audio) dari cache agar bisa diputar dan digeser */
-async function ranged(req, res) {
-  const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('range') || '');
-  if (!m || res.status !== 200) return res;
-  const buf = await res.arrayBuffer(), n = buf.byteLength;
-  let s = m[1] === '' ? n - parseInt(m[2], 10) : parseInt(m[1], 10);
-  let t = m[1] === '' || m[2] === '' ? n - 1 : Math.min(parseInt(m[2], 10), n - 1);
-  if (s > t || s >= n) return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */' + n } });
-  return new Response(buf.slice(s, t + 1), { status: 206, headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream', 'Content-Length': String(t - s + 1), 'Content-Range': `bytes ${s}-${t}/${n}`, 'Accept-Ranges': 'bytes' } });
+const isFont = u => /fonts\.(googleapis|gstatic)\.com$/.test(u.hostname);
+async function rangeResponse(req, res) {
+  const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('range') || ''); if (!m) return res;
+  const b = await res.arrayBuffer(), n = b.byteLength; let s = m[1] === '' ? Math.max(0, n - +m[2]) : +m[1], en = m[1] !== '' && m[2] !== '' ? +m[2] : n - 1; en = Math.min(en, n - 1);
+  return new Response(b.slice(s, en + 1), { status: 206, statusText: 'Partial Content', headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/octet-stream', 'Content-Range': `bytes ${s}-${en}/${n}`, 'Content-Length': String(en - s + 1), 'Accept-Ranges': 'bytes' } });
 }
-
-/* File kode (html/js/css/json) = JARINGAN DULU, simpanan hanya cadangan saat offline/lambat.
-   Jadi bila guru mengganti file di GitHub, siswa yang online langsung mendapat versi terbaru,
-   walaupun nomor versi lupa dinaikkan. Aset berat (gambar, suara, video, font) = simpanan dulu. */
-const CODE = /\.(?:js|css|html|json|webmanifest)$/i, SLOW_MS = 4000;
 self.addEventListener('fetch', e => {
-  const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== location.origin) return;       // Firebase, YouTube, dll. lewat jaringan
+  const req = e.request; if (req.method !== 'GET') return; const u = new URL(req.url);
+  if (u.origin !== location.origin) {
+    if (isFont(u)) e.respondWith((async () => { const c = await caches.open(VERSION), h = await c.match(req); const f = fetch(req).then(r => { if (r.ok || r.type === 'opaque') c.put(req, r.clone()); return r; }).catch(() => h); return h || f; })());
+    return;                                                              // Firebase dll: langsung jaringan
+  }
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => { try { const r = await fetch(req); const c = await caches.open(VERSION); c.put('index.html', r.clone()).catch(() => { }); return r; } catch (x) { const c = await caches.open(VERSION); return (await c.match('index.html')) || (await c.match('./')) || (await c.match('offline.html')); } })());
+    return;
+  }
   e.respondWith((async () => {
-    const cache = await caches.open(CACHE);
-    const nav = req.mode === 'navigate';
-    const key = nav ? 'index.html' : req;
-    const offlineRes = () => new Response('Tidak ada koneksi dan berkas ini belum tersimpan.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-    if ((nav || CODE.test(url.pathname) || url.pathname.endsWith('/')) && !req.headers.has('range')) {
-      const net = fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' }).then(r => { if (r.ok && r.status === 200) cache.put(key, r.clone()); return r; });
-      net.catch(() => {});
-      try { return await Promise.race([net, new Promise((_, rej) => setTimeout(rej, SLOW_MS))]); }
-      catch (_) {
-        const hit = await cache.match(key, { ignoreSearch: true });
-        if (hit) return hit;
-        try { return await net; } catch (__) { return offlineRes(); }
-      }
-    }
-    const hit = await cache.match(req, { ignoreSearch: true });
-    if (hit) return req.headers.has('range') ? ranged(req, hit) : hit;
+    const c = await caches.open(VERSION), hit = await c.match(req.url, { ignoreSearch: true });
+    if (hit) return req.headers.has('range') ? rangeResponse(req, hit) : hit;
     try {
-      const r = await fetch(req);
-      if (r.ok && r.status === 200 && !req.headers.has('range')) cache.put(req, r.clone());
-      return r;
-    } catch (err) { return offlineRes(); }
+      if (req.headers.has('range')) return await fetch(req);               // belum tersimpan: biarkan jaringan melayani potongan
+      const r = await fetch(req); if (r.ok && r.status === 200) c.put(req, r.clone()).catch(() => { }); return r;
+    } catch (x) { return (await c.match('offline.html')) || Response.error(); }
   })());
 });
+self.addEventListener('message', e => {
+  const d = e.data || {};
+  if (d.type === 'SKIP_WAITING') return self.skipWaiting();
+  if (d.type === 'CLEAR') { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('pp-')).map(k => caches.delete(k)))).then(() => say(e, { type: 'CLEARED' }))); return; }
+  if (d.type === 'STATUS') { e.waitUntil((async () => { const c = await caches.open(VERSION), ks = await c.keys(); say(e, { type: 'STATUS', n: ks.length, version: VERSION }); })()); return; }
+  if (d.type === 'CACHE_ALL') {
+    e.waitUntil((async () => {
+      const c = await caches.open(VERSION), urls = d.urls || []; let done = 0, fail = 0, i = 0;
+      const worker = async () => { while (i < urls.length) { const u = urls[i++]; try { if (!(await c.match(u))) { const r = await fetch(u); if (r.ok && r.status === 200) await c.put(u, r); else fail++; } } catch (x) { fail++; } done++; say(e, { type: 'PROGRESS', done, total: urls.length, fail }); } };
+      await Promise.all([worker(), worker(), worker(), worker()]); say(e, { type: 'DONE', done, total: urls.length, fail });
+    })());
+  }
+});
+async function say(e, msg) { const cs = await self.clients.matchAll({ includeUncontrolled: true }); cs.forEach(c => c.postMessage(msg)); }
