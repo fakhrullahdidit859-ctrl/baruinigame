@@ -813,38 +813,18 @@
 (function () {
   'use strict';
   const PATH = 'presentasi';
-  const MAX_MB = 20;
+  const MAX_MB = 5;                          // batas aman untuk Firebase RTDB base64
   const MAX_BYTES = MAX_MB * 1024 * 1024;
   const POLL_MS = 5000;
 
-  /* ── Upload ke Firebase Storage via REST, dapat URL publik ── */
-  async function uploadToStorage(file, onProgress) {
-    const cfg = window.PP_FIREBASE || {};
-    const bucket = cfg.storageBucket || '';
-    if (!bucket) throw new Error('storageBucket belum dikonfigurasi');
-    // Buat nama file unik
-    const ext = file.name.split('.').pop();
-    const uid = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-    const fileName = `presentasi/${uid}.${ext}`;
-    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fileName)}`;
-    // Upload dengan XMLHttpRequest supaya bisa track progress
+  /* ── Baca file sebagai base64 data URL ── */
+  function readFileB64(file, onProgress) {
     return new Promise((ok, fail) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', uploadUrl);
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-      xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const res = JSON.parse(xhr.responseText);
-          // URL download publik
-          const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(res.name)}?alt=media`;
-          ok({ downloadUrl, storagePath: res.name, contentType: res.contentType });
-        } else {
-          fail(new Error('Upload gagal: HTTP ' + xhr.status + ' — ' + xhr.responseText));
-        }
-      };
-      xhr.onerror = () => fail(new Error('Upload gagal: network error'));
-      xhr.send(file);
+      const fr = new FileReader();
+      fr.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      fr.onload  = e => ok(e.target.result);
+      fr.onerror = fail;
+      fr.readAsDataURL(file);
     });
   }
 
@@ -941,7 +921,7 @@
         <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:12px;cursor:pointer;transition:background .2s;">
           <div style="font-size:48px;line-height:1;margin-bottom:8px;">📤</div>
           <b style="font-size:16px;color:#7c3aed;display:block;margin-bottom:4px;">Ketuk untuk upload file</b>
-          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel — maks. ${MAX_MB}MB per file · bisa pilih banyak sekaligus</span>
+          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel — maks. ${MAX_MB}MB per file</span>
           <input type="file" id="presFileInput" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt" style="display:none;">
         </div>
 
@@ -1166,30 +1146,15 @@
 
           for (let i = 0; i < valid.length; i++) {
             const file = valid[i];
-            progLabel.textContent = 'Mengupload '+(i+1)+'/'+valid.length+': '+file.name;
-            progFill.style.width = Math.round((i/valid.length)*80)+'%';
+            progLabel.textContent = 'Memproses '+(i+1)+'/'+valid.length+': '+file.name;
+            progFill.style.width = Math.round((i/valid.length)*50)+'%';
             try {
-              /* Coba Firebase Storage dulu */
-              let fileUrl = '';
-              try {
-                const res = await uploadToStorage(file, pct => {
-                  progFill.style.width = Math.round(((i + pct * 0.8) / valid.length) * 100) + '%';
-                });
-                fileUrl = res.downloadUrl;
-              } catch(storageErr) {
-                /* Fallback: base64 (hanya untuk file kecil ≤ 2MB) */
-                if (file.size <= 2 * 1024 * 1024) {
-                  fileUrl = await new Promise((ok, fail) => {
-                    const fr = new FileReader();
-                    fr.onload = e => ok(e.target.result);
-                    fr.onerror = fail;
-                    fr.readAsDataURL(file);
-                  });
-                } else {
-                  throw new Error('Firebase Storage tidak tersedia dan file terlalu besar untuk base64. Coba file lebih kecil atau periksa koneksi.');
-                }
-              }
+              /* Baca sebagai base64 — pasti berhasil tanpa server apapun */
+              const dataUrl = await readFileB64(file, pct => {
+                progFill.style.width = Math.round(((i + pct * 0.8) / valid.length) * 100) + '%';
+              });
 
+              progLabel.textContent = 'Menyimpan ke database: '+file.name;
               const id = C.uid();
               await C.put(PATH+'/'+id, {
                 id,
@@ -1199,7 +1164,7 @@
                 uploader: myName(),
                 ts: Date.now(),
                 order: Date.now() + i,
-                url: fileUrl
+                url: dataUrl      // simpan sebagai data URL base64
               });
               progFill.style.width = Math.round(((i+1)/valid.length)*100)+'%';
             } catch(err) {
@@ -1207,7 +1172,7 @@
             }
           }
 
-          progLabel.textContent = '✅ Selesai! '+valid.length+' file diupload.';
+          progLabel.textContent = '✅ Selesai! '+valid.length+' file tersimpan.';
           setTimeout(() => { progress.style.display='none'; progFill.style.width='0%'; }, 3000);
           uploadBox.style.pointerEvents = '';
         }
