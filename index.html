@@ -807,15 +807,46 @@
 <script src="js/materi_hub.js"></script>
 <script>
 /* =========================================================
-   PRESENTASI KOLABORATIF — inline embed (hindari 404 cache)
+   PRESENTASI KOLABORATIF v2 — Firebase Storage + Slideshow
    Made by Didit Fakhrullah
    ========================================================= */
 (function () {
   'use strict';
   const PATH = 'presentasi';
-  const MAX_MB = 8;
+  const MAX_MB = 20;
   const MAX_BYTES = MAX_MB * 1024 * 1024;
   const POLL_MS = 5000;
+
+  /* ── Upload ke Firebase Storage via REST, dapat URL publik ── */
+  async function uploadToStorage(file, onProgress) {
+    const cfg = window.PP_FIREBASE || {};
+    const bucket = cfg.storageBucket || '';
+    if (!bucket) throw new Error('storageBucket belum dikonfigurasi');
+    // Buat nama file unik
+    const ext = file.name.split('.').pop();
+    const uid = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+    const fileName = `presentasi/${uid}.${ext}`;
+    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(fileName)}`;
+    // Upload dengan XMLHttpRequest supaya bisa track progress
+    return new Promise((ok, fail) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const res = JSON.parse(xhr.responseText);
+          // URL download publik
+          const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(res.name)}?alt=media`;
+          ok({ downloadUrl, storagePath: res.name, contentType: res.contentType });
+        } else {
+          fail(new Error('Upload gagal: HTTP ' + xhr.status + ' — ' + xhr.responseText));
+        }
+      };
+      xhr.onerror = () => fail(new Error('Upload gagal: network error'));
+      xhr.send(file);
+    });
+  }
 
   function fileIcon(mime) {
     if (!mime) return '📎';
@@ -829,41 +860,93 @@
     return '📎';
   }
 
-  function readFileB64(file) {
-    return new Promise((ok, fail) => {
-      const fr = new FileReader();
-      fr.onload = e => ok(e.target.result);
-      fr.onerror = fail;
-      fr.readAsDataURL(file);
-    });
-  }
-
   function myName() {
     try { return PPStore.data.name || 'Siswa'; } catch(e) { return 'Siswa'; }
   }
   function isGuru() {
     try { const av = PPStore.data.avatar || ''; return av.startsWith('guru'); } catch(e) { return false; }
   }
+  function esc(s) { return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  /* ── Slideshow fullscreen ── */
+  function bukaSlideshow(sorted) {
+    if (!sorted.length) { alert('Belum ada file untuk ditampilkan.'); return; }
+    let idx = 0;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;';
+
+    function slide(i) {
+      const item = sorted[i][1];
+      const mime = item.mime || '';
+      const url  = item.url || item.data || '';
+      let media = '';
+      if (mime.startsWith('image/') && url) {
+        media = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">`;
+      } else if (mime.startsWith('video/') && url) {
+        media = `<video src="${url}" controls autoplay style="max-width:100%;max-height:100%;display:block;"></video>`;
+      } else if (mime.startsWith('audio/') && url) {
+        media = `<div style="text-align:center;padding:40px;"><div style="font-size:80px;margin-bottom:20px;">🎵</div><audio src="${url}" controls autoplay style="width:300px;"></audio></div>`;
+      } else if (url) {
+        media = `<div style="text-align:center;padding:40px;"><div style="font-size:80px;margin-bottom:16px;">${fileIcon(mime)}</div><p style="color:#fff;font-size:18px;margin:0 0 20px;">${esc(item.name||'Dokumen')}</p><a href="${url}" target="_blank" style="background:#7c3aed;color:#fff;padding:12px 28px;border-radius:10px;font-size:16px;font-weight:700;text-decoration:none;">⬇ Buka / Unduh</a></div>`;
+      } else {
+        media = `<div style="text-align:center;padding:40px;color:#666;"><div style="font-size:60px;">❌</div><p>File tidak tersedia</p></div>`;
+      }
+
+      overlay.innerHTML = `
+        <div style="background:linear-gradient(90deg,#1e3a8a,#7c3aed);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;">
+          <div style="color:#fff;">
+            <b style="font-size:15px;">${esc(item.name||'Tanpa judul')}</b>
+            <span style="font-size:12px;opacity:.7;margin-left:8px;">👤 ${esc(item.uploader||'')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="color:#fff;font-size:13px;opacity:.8;">${i+1} / ${sorted.length}</span>
+            <button id="slPrev" style="background:rgba(255,255,255,.2);border:none;border-radius:8px;color:#fff;padding:6px 14px;font-size:16px;cursor:pointer;">◀</button>
+            <button id="slNext" style="background:rgba(255,255,255,.2);border:none;border-radius:8px;color:#fff;padding:6px 14px;font-size:16px;cursor:pointer;">▶</button>
+            <button id="slClose" style="background:#ef4444;border:none;border-radius:8px;color:#fff;padding:6px 14px;font-size:14px;font-weight:700;cursor:pointer;">✕ Tutup</button>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a;">
+          ${media}
+        </div>
+        ${item.ket ? `<div style="background:#1e293b;color:#94a3b8;padding:10px 20px;font-size:13px;text-align:center;flex-shrink:0;">${esc(item.ket)}</div>` : ''}`;
+
+      overlay.querySelector('#slPrev').onclick = () => { idx = (idx - 1 + sorted.length) % sorted.length; slide(idx); };
+      overlay.querySelector('#slNext').onclick = () => { idx = (idx + 1) % sorted.length; slide(idx); };
+      overlay.querySelector('#slClose').onclick = () => { document.removeEventListener('keydown', onKey); overlay.remove(); };
+    }
+
+    function onKey(e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { idx = (idx+1) % sorted.length; slide(idx); }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { idx = (idx-1+sorted.length) % sorted.length; slide(idx); }
+      if (e.key === 'Escape') { document.removeEventListener('keydown', onKey); overlay.remove(); }
+    }
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    slide(0);
+  }
 
   PP.screens = PP.screens || {};
 
   PP.screens.presentasi = function () {
     return {
-      html: `<div class="wrap" style="max-width:860px;padding:0 8px 80px;">
+      html: `<div class="wrap" style="max-width:860px;padding:0 8px 100px;">
 
+        <!-- Header -->
         <div style="background:linear-gradient(135deg,#1e3a8a,#7c3aed);color:#fff;border-radius:16px;padding:20px 24px;margin-bottom:16px;">
           <h2 style="margin:0 0 4px;font-size:20px;">🎤 Presentasi Kelas</h2>
           <p style="margin:0;font-size:13px;opacity:.85;">Upload foto, video, atau dokumen. Semua teman dan guru dapat melihat hasilnya secara real-time.</p>
         </div>
 
-        <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:16px;cursor:pointer;transition:background .2s;">
+        <!-- Area Upload -->
+        <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:12px;cursor:pointer;transition:background .2s;">
           <div style="font-size:48px;line-height:1;margin-bottom:8px;">📤</div>
           <b style="font-size:16px;color:#7c3aed;display:block;margin-bottom:4px;">Ketuk untuk upload file</b>
-          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel, PowerPoint — maks. ${MAX_MB}MB per file</span>
+          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel — maks. ${MAX_MB}MB per file · bisa pilih banyak sekaligus</span>
           <input type="file" id="presFileInput" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt" style="display:none;">
         </div>
 
-        <div id="presProgress" style="display:none;background:#ede9fe;border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+        <!-- Progress -->
+        <div id="presProgress" style="display:none;background:#ede9fe;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:24px;height:24px;border:3px solid #7c3aed;border-top-color:transparent;border-radius:50%;animation:prespin .8s linear infinite;flex-shrink:0;"></div>
             <div style="flex:1;">
@@ -875,8 +958,14 @@
           </div>
         </div>
 
+        <!-- Tombol Slideshow -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button id="presBtnSlide" style="flex:1;min-width:140px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;">▶ Mulai Presentasi Layar Penuh</button>
+        </div>
+
+        <!-- Header daftar -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <h3 style="margin:0;font-size:16px;color:#1e293b;">📋 Semua Presentasi</h3>
+          <h3 style="margin:0;font-size:16px;color:#1e293b;">📋 Semua File</h3>
           <span id="presCount" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">Memuat...</span>
         </div>
 
@@ -888,29 +977,33 @@
 
         <style>
           @keyframes prespin { to { transform:rotate(360deg); } }
-          .pc { background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden;position:relative; }
-          .pc-img { width:100%;max-height:400px;object-fit:contain;background:#0f172a;display:block; }
+          .pc { background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden;position:relative;transition:box-shadow .2s; }
+          .pc:hover { box-shadow:0 6px 24px rgba(0,0,0,.15); }
+          .pc-img { width:100%;max-height:420px;object-fit:contain;background:#0f172a;display:block; }
           .pc-vid { width:100%;max-height:380px;background:#000;display:block; }
-          .pc-doc { width:100%;height:200px;background:linear-gradient(135deg,#1e3a8a,#312e81);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px; }
+          .pc-doc { width:100%;height:180px;background:linear-gradient(135deg,#1e3a8a,#312e81);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px; }
           .pc-meta { padding:14px 16px; }
           .pc-name { font-size:17px;font-weight:700;color:#1e293b;margin:0 0 4px; }
-          .pc-ket { font-size:14px;color:#475569;margin:0 0 10px;line-height:1.5;white-space:pre-wrap; }
+          .pc-ket  { font-size:14px;color:#475569;margin:0 0 10px;line-height:1.5;white-space:pre-wrap; }
           .pc-foot { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px; }
-          .pc-who { font-size:12px;color:#94a3b8; }
+          .pc-who  { font-size:12px;color:#94a3b8; }
           .pc-acts { display:flex;gap:6px;flex-wrap:wrap; }
-          .pb { border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer; }
-          .pb-edit { background:#fef9c3;color:#854d0e; }
-          .pb-del { background:#fee2e2;color:#991b1b; }
-          .pb-save { background:#dcfce7;color:#166534; }
+          .pb { border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s; }
+          .pb:hover { opacity:.8; }
+          .pb-edit   { background:#fef9c3;color:#854d0e; }
+          .pb-del    { background:#fee2e2;color:#991b1b; }
+          .pb-save   { background:#dcfce7;color:#166534; }
           .pb-cancel { background:#f1f5f9;color:#475569; }
+          .pb-slide  { background:#ede9fe;color:#7c3aed; }
           .pc-num { position:absolute;top:10px;left:10px;background:#7c3aed;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3); }
           .pc-form { background:#f8fafc;border-top:2px solid #e2e8f0;padding:14px 16px;display:none; }
           .pc-form.open { display:block; }
           .pc-inp { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px; }
           .pc-inp:focus { outline:none;border-color:#7c3aed; }
-          .pc-ta { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:8px; }
-          .pc-ta:focus { outline:none;border-color:#7c3aed; }
+          .pc-ta  { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:8px; }
+          .pc-ta:focus  { outline:none;border-color:#7c3aed; }
           .pc-empty { text-align:center;padding:60px 20px;color:#9ca3af; }
+          .pc-uplbl { position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:3px 8px;font-size:11px; }
         </style>
 
         <p style="text-align:right;color:#ccc;font-size:11px;margin-top:20px;">Made by Didit Fakhrullah</p>
@@ -919,78 +1012,85 @@
       mount(root) {
         const C = window.PPCloud;
         if (!C) {
-          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Koneksi Firebase tidak tersedia. Pastikan terhubung internet.</p>';
+          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Koneksi Firebase tidak tersedia.</p>';
           root.querySelector('#presLoading').style.display = 'none';
           return;
         }
 
-        const uploadBox = root.querySelector('#presUploadBox');
-        const fileInput = root.querySelector('#presFileInput');
-        const progress  = root.querySelector('#presProgress');
-        const progLabel = root.querySelector('#presProgLabel');
-        const progFill  = root.querySelector('#presProgFill');
-        const listEl    = root.querySelector('#presList');
-        const loadingEl = root.querySelector('#presLoading');
-        const countEl   = root.querySelector('#presCount');
+        const uploadBox  = root.querySelector('#presUploadBox');
+        const fileInput  = root.querySelector('#presFileInput');
+        const progress   = root.querySelector('#presProgress');
+        const progLabel  = root.querySelector('#presProgLabel');
+        const progFill   = root.querySelector('#presProgFill');
+        const listEl     = root.querySelector('#presList');
+        const loadingEl  = root.querySelector('#presLoading');
+        const countEl    = root.querySelector('#presCount');
+        const btnSlide   = root.querySelector('#presBtnSlide');
 
         let items = {};
+        let sorted = [];
         let stopWatch = null;
 
-        function esc(s) { return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
+        /* ── Render daftar ── */
         function render(data) {
           loadingEl.style.display = 'none';
           if (!data || !Object.keys(data).length) {
-            listEl.innerHTML = `<div class="pc-empty"><div style="font-size:56px;">📭</div><b style="font-size:16px;display:block;margin:8px 0 4px;">Belum ada presentasi</b><span style="font-size:13px;">Jadilah yang pertama mengupload!</span></div>`;
+            listEl.innerHTML = `<div class="pc-empty"><div style="font-size:56px;">📭</div><b style="font-size:16px;display:block;margin:8px 0 4px;">Belum ada file</b><span style="font-size:13px;">Upload foto atau video untuk mulai presentasi!</span></div>`;
             countEl.textContent = '0 file';
+            sorted = [];
             return;
           }
 
-          const sorted = Object.entries(data).sort((a,b) => {
-            const oa = a[1].order != null ? a[1].order : (a[1].ts || 0);
-            const ob = b[1].order != null ? b[1].order : (b[1].ts || 0);
+          sorted = Object.entries(data).sort((a,b) => {
+            const oa = a[1].order != null ? a[1].order : (a[1].ts||0);
+            const ob = b[1].order != null ? b[1].order : (b[1].ts||0);
             return oa - ob;
           });
 
           countEl.textContent = sorted.length + ' file';
           listEl.innerHTML = '';
 
-          sorted.forEach(([id, item], idx) => {
+          sorted.forEach(([id, item], i) => {
             const guru = isGuru();
             const mine = item.uploader === myName() || guru;
             const icon = fileIcon(item.mime);
+            const mime = item.mime || '';
+            const url  = item.url || item.data || '';
             const ts   = item.ts ? new Date(item.ts).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
 
             let prev = '';
-            if (item.mime && item.mime.startsWith('image/') && item.data) {
-              prev = `<div style="background:#0f172a;"><img src="${item.data}" class="pc-img" alt="${esc(item.name||'')}"></div>`;
-            } else if (item.mime && item.mime.startsWith('video/') && item.data) {
-              prev = `<div style="background:#000;"><video src="${item.data}" class="pc-vid" controls preload="metadata"></video></div>`;
-            } else if (item.mime && item.mime.startsWith('audio/') && item.data) {
-              prev = `<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:28px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:12px;">🎵</div><audio src="${item.data}" controls style="width:100%;max-width:400px;"></audio></div>`;
+            if (mime.startsWith('image/') && url) {
+              prev = `<div style="background:#0f172a;cursor:pointer;" data-slide="${i}"><img src="${url}" class="pc-img" alt="${esc(item.name||'')}"></div>`;
+            } else if (mime.startsWith('video/') && url) {
+              prev = `<div style="background:#000;"><video src="${url}" class="pc-vid" controls preload="metadata"></video></div>`;
+            } else if (mime.startsWith('audio/') && url) {
+              prev = `<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:28px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:12px;">🎵</div><audio src="${url}" controls style="width:100%;max-width:400px;"></audio></div>`;
+            } else if (url) {
+              prev = `<div class="pc-doc"><span style="font-size:60px;">${icon}</span><span style="color:#fff;font-size:13px;opacity:.8;">${esc(mime||'Dokumen')}</span><a href="${url}" target="_blank" style="margin-top:8px;background:#7c3aed;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;text-decoration:none;">⬇ Buka File</a></div>`;
             } else {
-              prev = `<div class="pc-doc"><span style="font-size:64px;">${icon}</span><span style="color:#fff;font-size:13px;opacity:.8;">${esc(item.mime||'Dokumen')}</span>${item.data?`<a href="${item.data}" download="${esc(item.name||'file')}" style="margin-top:8px;background:#7c3aed;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;text-decoration:none;">⬇ Unduh File</a>`:''}`;
-              prev += '</div>';
+              prev = `<div class="pc-doc"><span style="font-size:60px;">${icon}</span><span style="color:#ff6b6b;font-size:13px;">File belum tersedia</span></div>`;
             }
 
             const card = document.createElement('div');
             card.className = 'pc';
             card.dataset.id = id;
             card.innerHTML = `${prev}
-              <div class="pc-num">${idx+1}</div>
+              <div class="pc-num">${i+1}</div>
+              <div class="pc-uplbl">${esc(item.uploader||'?')}</div>
               <div class="pc-meta">
                 <p class="pc-name">${icon} ${esc(item.name||'Tanpa judul')}</p>
                 <p class="pc-ket">${item.ket ? esc(item.ket) : '<span style="color:#94a3b8;font-style:italic;">Belum ada keterangan</span>'}</p>
                 <div class="pc-foot">
-                  <span class="pc-who">👤 ${esc(item.uploader||'Anonim')} · ${ts}${guru && item.uploader ? ' <em style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-style:normal;font-size:11px;">guru</em>' : ''}</span>
+                  <span class="pc-who">📅 ${ts}</span>
                   <div class="pc-acts">
+                    <button class="pb pb-slide" data-slidestart="${i}">▶ Tayangkan</button>
                     ${mine ? `<button class="pb pb-edit" data-edit="${id}">✏️ Edit</button>` : ''}
                     ${mine ? `<button class="pb pb-del" data-del="${id}">🗑 Hapus</button>` : ''}
                   </div>
                 </div>
               </div>
               <div class="pc-form" id="pf_${id}">
-                <input class="pc-inp" id="pn_${id}" value="${esc(item.name||'')}" placeholder="Judul presentasi">
+                <input class="pc-inp" id="pn_${id}" value="${esc(item.name||'')}" placeholder="Judul file">
                 <textarea class="pc-ta" id="pk_${id}" placeholder="Keterangan / catatan...">${esc(item.ket||'')}</textarea>
                 <div style="display:flex;gap:8px;">
                   <button class="pb pb-save" data-save="${id}">💾 Simpan</button>
@@ -1000,47 +1100,49 @@
             listEl.appendChild(card);
           });
 
+          /* Events */
+          listEl.querySelectorAll('[data-slidestart]').forEach(btn => {
+            btn.onclick = () => bukaSlideshow(sorted, +btn.dataset.slidestart);
+          });
+          listEl.querySelectorAll('[data-slide]').forEach(el => {
+            el.onclick = () => bukaSlideshow(sorted, +el.dataset.slide);
+          });
           listEl.querySelectorAll('[data-edit]').forEach(btn => {
-            btn.onclick = () => {
-              const f = root.querySelector('#pf_'+btn.dataset.edit);
-              if (f) f.classList.toggle('open');
-            };
+            btn.onclick = () => root.querySelector('#pf_'+btn.dataset.edit)?.classList.toggle('open');
           });
           listEl.querySelectorAll('[data-cancel]').forEach(btn => {
-            btn.onclick = () => {
-              const f = root.querySelector('#pf_'+btn.dataset.cancel);
-              if (f) f.classList.remove('open');
-            };
+            btn.onclick = () => root.querySelector('#pf_'+btn.dataset.cancel)?.classList.remove('open');
           });
           listEl.querySelectorAll('[data-save]').forEach(btn => {
             btn.onclick = async () => {
               const id = btn.dataset.save;
-              const nEl = root.querySelector('#pn_'+id);
-              const kEl = root.querySelector('#pk_'+id);
               btn.textContent = '⏳'; btn.disabled = true;
               await C.patch(PATH+'/'+id, {
-                name: nEl.value.trim() || items[id]?.name || 'Tanpa judul',
-                ket:  kEl.value.trim()
+                name: root.querySelector('#pn_'+id)?.value.trim() || items[id]?.name || 'Tanpa judul',
+                ket:  root.querySelector('#pk_'+id)?.value.trim() || ''
               });
               btn.textContent = '✅';
               setTimeout(() => { btn.textContent='💾 Simpan'; btn.disabled=false; }, 1500);
-              const f = root.querySelector('#pf_'+id);
-              if (f) f.classList.remove('open');
+              root.querySelector('#pf_'+id)?.classList.remove('open');
             };
           });
           listEl.querySelectorAll('[data-del]').forEach(btn => {
             btn.onclick = async () => {
               const id = btn.dataset.del;
-              const nama = data[id]?.name || 'file ini';
-              if (!confirm('Hapus "'+nama+'"?\nTindakan ini tidak bisa dibatalkan.')) return;
+              if (!confirm('Hapus "' + (data[id]?.name||'file ini') + '"?\nTidak bisa dibatalkan.')) return;
               btn.textContent = '⏳'; btn.disabled = true;
               await C.del(PATH+'/'+id);
             };
           });
         }
 
+        /* Slideshow dari tombol utama */
+        btnSlide.onclick = () => bukaSlideshow(sorted, 0);
+
+        /* Watch real-time */
         stopWatch = C.watch(PATH, data => { items = data || {}; render(items); }, POLL_MS);
 
+        /* Upload */
         uploadBox.addEventListener('click', () => fileInput.click());
         uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.background='#ede9fe'; });
         uploadBox.addEventListener('dragleave', () => uploadBox.style.background='#f5f3ff');
@@ -1055,39 +1157,58 @@
 
         async function handleFiles(files) {
           const valid = files.filter(f => {
-            if (f.size > MAX_BYTES) {
-              alert('"'+f.name+'" terlalu besar (maks '+MAX_MB+'MB)');
-              return false;
-            }
+            if (f.size > MAX_BYTES) { alert('"'+f.name+'" terlalu besar (maks '+MAX_MB+'MB)'); return false; }
             return true;
           });
           if (!valid.length) return;
           progress.style.display = 'block';
           uploadBox.style.pointerEvents = 'none';
+
           for (let i = 0; i < valid.length; i++) {
             const file = valid[i];
             progLabel.textContent = 'Mengupload '+(i+1)+'/'+valid.length+': '+file.name;
-            progFill.style.width = Math.round((i/valid.length)*100)+'%';
+            progFill.style.width = Math.round((i/valid.length)*80)+'%';
             try {
-              const dataUrl = await readFileB64(file);
+              /* Coba Firebase Storage dulu */
+              let fileUrl = '';
+              try {
+                const res = await uploadToStorage(file, pct => {
+                  progFill.style.width = Math.round(((i + pct * 0.8) / valid.length) * 100) + '%';
+                });
+                fileUrl = res.downloadUrl;
+              } catch(storageErr) {
+                /* Fallback: base64 (hanya untuk file kecil ≤ 2MB) */
+                if (file.size <= 2 * 1024 * 1024) {
+                  fileUrl = await new Promise((ok, fail) => {
+                    const fr = new FileReader();
+                    fr.onload = e => ok(e.target.result);
+                    fr.onerror = fail;
+                    fr.readAsDataURL(file);
+                  });
+                } else {
+                  throw new Error('Firebase Storage tidak tersedia dan file terlalu besar untuk base64. Coba file lebih kecil atau periksa koneksi.');
+                }
+              }
+
               const id = C.uid();
               await C.put(PATH+'/'+id, {
                 id,
-                name: file.name.replace(/\.[^.]+$/,''),
+                name: file.name.replace(/\.[^.]+$/, ''),
                 ket: '',
                 mime: file.type || 'application/octet-stream',
                 uploader: myName(),
                 ts: Date.now(),
                 order: Date.now() + i,
-                data: dataUrl
+                url: fileUrl
               });
+              progFill.style.width = Math.round(((i+1)/valid.length)*100)+'%';
             } catch(err) {
-              alert('Gagal upload: '+file.name+'\n'+err.message);
+              alert('Gagal upload "'+file.name+'":\n'+err.message);
             }
           }
-          progFill.style.width = '100%';
-          progLabel.textContent = '✅ '+valid.length+' file berhasil diupload!';
-          setTimeout(() => { progress.style.display='none'; progFill.style.width='0%'; }, 2500);
+
+          progLabel.textContent = '✅ Selesai! '+valid.length+' file diupload.';
+          setTimeout(() => { progress.style.display='none'; progFill.style.width='0%'; }, 3000);
           uploadBox.style.pointerEvents = '';
         }
 
@@ -1095,6 +1216,9 @@
       }
     };
   };
+
+  /* Slideshow bisa dipanggil dari luar (guru buka dari layar lain) */
+  PP.bukaSlideshow = bukaSlideshow;
 
 })();
 </script>
