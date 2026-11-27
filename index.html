@@ -805,7 +805,299 @@
 <script src="js/buatsoal.js"></script>
 <script src="js/rangka3d.js"></script>
 <script src="js/materi_hub.js"></script>
-<script src="js/presentasi.js"></script>
+<script>
+/* =========================================================
+   PRESENTASI KOLABORATIF — inline embed (hindari 404 cache)
+   Made by Didit Fakhrullah
+   ========================================================= */
+(function () {
+  'use strict';
+  const PATH = 'presentasi';
+  const MAX_MB = 8;
+  const MAX_BYTES = MAX_MB * 1024 * 1024;
+  const POLL_MS = 5000;
+
+  function fileIcon(mime) {
+    if (!mime) return '📎';
+    if (mime.startsWith('image/')) return '🖼️';
+    if (mime.startsWith('video/')) return '🎬';
+    if (mime.startsWith('audio/')) return '🎵';
+    if (mime.includes('pdf')) return '📄';
+    if (mime.includes('word') || mime.includes('document')) return '📝';
+    if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return '📊';
+    if (mime.includes('presentation') || mime.includes('powerpoint')) return '📑';
+    return '📎';
+  }
+
+  function readFileB64(file) {
+    return new Promise((ok, fail) => {
+      const fr = new FileReader();
+      fr.onload = e => ok(e.target.result);
+      fr.onerror = fail;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function myName() {
+    try { return PPStore.data.name || 'Siswa'; } catch(e) { return 'Siswa'; }
+  }
+  function isGuru() {
+    try { const av = PPStore.data.avatar || ''; return av.startsWith('guru'); } catch(e) { return false; }
+  }
+
+  PP.screens = PP.screens || {};
+
+  PP.screens.presentasi = function () {
+    return {
+      html: `<div class="wrap" style="max-width:860px;padding:0 8px 80px;">
+
+        <div style="background:linear-gradient(135deg,#1e3a8a,#7c3aed);color:#fff;border-radius:16px;padding:20px 24px;margin-bottom:16px;">
+          <h2 style="margin:0 0 4px;font-size:20px;">🎤 Presentasi Kelas</h2>
+          <p style="margin:0;font-size:13px;opacity:.85;">Upload foto, video, atau dokumen. Semua teman dan guru dapat melihat hasilnya secara real-time.</p>
+        </div>
+
+        <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:16px;cursor:pointer;transition:background .2s;">
+          <div style="font-size:48px;line-height:1;margin-bottom:8px;">📤</div>
+          <b style="font-size:16px;color:#7c3aed;display:block;margin-bottom:4px;">Ketuk untuk upload file</b>
+          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel, PowerPoint — maks. ${MAX_MB}MB per file</span>
+          <input type="file" id="presFileInput" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt" style="display:none;">
+        </div>
+
+        <div id="presProgress" style="display:none;background:#ede9fe;border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:24px;height:24px;border:3px solid #7c3aed;border-top-color:transparent;border-radius:50%;animation:prespin .8s linear infinite;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <b id="presProgLabel" style="color:#7c3aed;font-size:14px;">Mengupload...</b>
+              <div style="height:6px;background:#ddd6fe;border-radius:4px;margin-top:4px;overflow:hidden;">
+                <div id="presProgFill" style="height:100%;background:#7c3aed;width:0%;transition:width .3s;border-radius:4px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h3 style="margin:0;font-size:16px;color:#1e293b;">📋 Semua Presentasi</h3>
+          <span id="presCount" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">Memuat...</span>
+        </div>
+
+        <div id="presList" style="display:flex;flex-direction:column;gap:14px;"></div>
+        <div id="presLoading" style="text-align:center;padding:40px;color:#9ca3af;">
+          <div style="font-size:36px;">⏳</div>
+          <p style="margin:8px 0 0;">Memuat presentasi...</p>
+        </div>
+
+        <style>
+          @keyframes prespin { to { transform:rotate(360deg); } }
+          .pc { background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden;position:relative; }
+          .pc-img { width:100%;max-height:400px;object-fit:contain;background:#0f172a;display:block; }
+          .pc-vid { width:100%;max-height:380px;background:#000;display:block; }
+          .pc-doc { width:100%;height:200px;background:linear-gradient(135deg,#1e3a8a,#312e81);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px; }
+          .pc-meta { padding:14px 16px; }
+          .pc-name { font-size:17px;font-weight:700;color:#1e293b;margin:0 0 4px; }
+          .pc-ket { font-size:14px;color:#475569;margin:0 0 10px;line-height:1.5;white-space:pre-wrap; }
+          .pc-foot { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px; }
+          .pc-who { font-size:12px;color:#94a3b8; }
+          .pc-acts { display:flex;gap:6px;flex-wrap:wrap; }
+          .pb { border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer; }
+          .pb-edit { background:#fef9c3;color:#854d0e; }
+          .pb-del { background:#fee2e2;color:#991b1b; }
+          .pb-save { background:#dcfce7;color:#166534; }
+          .pb-cancel { background:#f1f5f9;color:#475569; }
+          .pc-num { position:absolute;top:10px;left:10px;background:#7c3aed;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3); }
+          .pc-form { background:#f8fafc;border-top:2px solid #e2e8f0;padding:14px 16px;display:none; }
+          .pc-form.open { display:block; }
+          .pc-inp { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px; }
+          .pc-inp:focus { outline:none;border-color:#7c3aed; }
+          .pc-ta { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:8px; }
+          .pc-ta:focus { outline:none;border-color:#7c3aed; }
+          .pc-empty { text-align:center;padding:60px 20px;color:#9ca3af; }
+        </style>
+
+        <p style="text-align:right;color:#ccc;font-size:11px;margin-top:20px;">Made by Didit Fakhrullah</p>
+      </div>`,
+
+      mount(root) {
+        const C = window.PPCloud;
+        if (!C) {
+          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Koneksi Firebase tidak tersedia. Pastikan terhubung internet.</p>';
+          root.querySelector('#presLoading').style.display = 'none';
+          return;
+        }
+
+        const uploadBox = root.querySelector('#presUploadBox');
+        const fileInput = root.querySelector('#presFileInput');
+        const progress  = root.querySelector('#presProgress');
+        const progLabel = root.querySelector('#presProgLabel');
+        const progFill  = root.querySelector('#presProgFill');
+        const listEl    = root.querySelector('#presList');
+        const loadingEl = root.querySelector('#presLoading');
+        const countEl   = root.querySelector('#presCount');
+
+        let items = {};
+        let stopWatch = null;
+
+        function esc(s) { return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+        function render(data) {
+          loadingEl.style.display = 'none';
+          if (!data || !Object.keys(data).length) {
+            listEl.innerHTML = `<div class="pc-empty"><div style="font-size:56px;">📭</div><b style="font-size:16px;display:block;margin:8px 0 4px;">Belum ada presentasi</b><span style="font-size:13px;">Jadilah yang pertama mengupload!</span></div>`;
+            countEl.textContent = '0 file';
+            return;
+          }
+
+          const sorted = Object.entries(data).sort((a,b) => {
+            const oa = a[1].order != null ? a[1].order : (a[1].ts || 0);
+            const ob = b[1].order != null ? b[1].order : (b[1].ts || 0);
+            return oa - ob;
+          });
+
+          countEl.textContent = sorted.length + ' file';
+          listEl.innerHTML = '';
+
+          sorted.forEach(([id, item], idx) => {
+            const guru = isGuru();
+            const mine = item.uploader === myName() || guru;
+            const icon = fileIcon(item.mime);
+            const ts   = item.ts ? new Date(item.ts).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+
+            let prev = '';
+            if (item.mime && item.mime.startsWith('image/') && item.data) {
+              prev = `<div style="background:#0f172a;"><img src="${item.data}" class="pc-img" alt="${esc(item.name||'')}"></div>`;
+            } else if (item.mime && item.mime.startsWith('video/') && item.data) {
+              prev = `<div style="background:#000;"><video src="${item.data}" class="pc-vid" controls preload="metadata"></video></div>`;
+            } else if (item.mime && item.mime.startsWith('audio/') && item.data) {
+              prev = `<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:28px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:12px;">🎵</div><audio src="${item.data}" controls style="width:100%;max-width:400px;"></audio></div>`;
+            } else {
+              prev = `<div class="pc-doc"><span style="font-size:64px;">${icon}</span><span style="color:#fff;font-size:13px;opacity:.8;">${esc(item.mime||'Dokumen')}</span>${item.data?`<a href="${item.data}" download="${esc(item.name||'file')}" style="margin-top:8px;background:#7c3aed;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;text-decoration:none;">⬇ Unduh File</a>`:''}`;
+              prev += '</div>';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'pc';
+            card.dataset.id = id;
+            card.innerHTML = `${prev}
+              <div class="pc-num">${idx+1}</div>
+              <div class="pc-meta">
+                <p class="pc-name">${icon} ${esc(item.name||'Tanpa judul')}</p>
+                <p class="pc-ket">${item.ket ? esc(item.ket) : '<span style="color:#94a3b8;font-style:italic;">Belum ada keterangan</span>'}</p>
+                <div class="pc-foot">
+                  <span class="pc-who">👤 ${esc(item.uploader||'Anonim')} · ${ts}${guru && item.uploader ? ' <em style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-style:normal;font-size:11px;">guru</em>' : ''}</span>
+                  <div class="pc-acts">
+                    ${mine ? `<button class="pb pb-edit" data-edit="${id}">✏️ Edit</button>` : ''}
+                    ${mine ? `<button class="pb pb-del" data-del="${id}">🗑 Hapus</button>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="pc-form" id="pf_${id}">
+                <input class="pc-inp" id="pn_${id}" value="${esc(item.name||'')}" placeholder="Judul presentasi">
+                <textarea class="pc-ta" id="pk_${id}" placeholder="Keterangan / catatan...">${esc(item.ket||'')}</textarea>
+                <div style="display:flex;gap:8px;">
+                  <button class="pb pb-save" data-save="${id}">💾 Simpan</button>
+                  <button class="pb pb-cancel" data-cancel="${id}">Batal</button>
+                </div>
+              </div>`;
+            listEl.appendChild(card);
+          });
+
+          listEl.querySelectorAll('[data-edit]').forEach(btn => {
+            btn.onclick = () => {
+              const f = root.querySelector('#pf_'+btn.dataset.edit);
+              if (f) f.classList.toggle('open');
+            };
+          });
+          listEl.querySelectorAll('[data-cancel]').forEach(btn => {
+            btn.onclick = () => {
+              const f = root.querySelector('#pf_'+btn.dataset.cancel);
+              if (f) f.classList.remove('open');
+            };
+          });
+          listEl.querySelectorAll('[data-save]').forEach(btn => {
+            btn.onclick = async () => {
+              const id = btn.dataset.save;
+              const nEl = root.querySelector('#pn_'+id);
+              const kEl = root.querySelector('#pk_'+id);
+              btn.textContent = '⏳'; btn.disabled = true;
+              await C.patch(PATH+'/'+id, {
+                name: nEl.value.trim() || items[id]?.name || 'Tanpa judul',
+                ket:  kEl.value.trim()
+              });
+              btn.textContent = '✅';
+              setTimeout(() => { btn.textContent='💾 Simpan'; btn.disabled=false; }, 1500);
+              const f = root.querySelector('#pf_'+id);
+              if (f) f.classList.remove('open');
+            };
+          });
+          listEl.querySelectorAll('[data-del]').forEach(btn => {
+            btn.onclick = async () => {
+              const id = btn.dataset.del;
+              const nama = data[id]?.name || 'file ini';
+              if (!confirm('Hapus "'+nama+'"?\nTindakan ini tidak bisa dibatalkan.')) return;
+              btn.textContent = '⏳'; btn.disabled = true;
+              await C.del(PATH+'/'+id);
+            };
+          });
+        }
+
+        stopWatch = C.watch(PATH, data => { items = data || {}; render(items); }, POLL_MS);
+
+        uploadBox.addEventListener('click', () => fileInput.click());
+        uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.background='#ede9fe'; });
+        uploadBox.addEventListener('dragleave', () => uploadBox.style.background='#f5f3ff');
+        uploadBox.addEventListener('drop', e => {
+          e.preventDefault(); uploadBox.style.background='#f5f3ff';
+          handleFiles([...e.dataTransfer.files]);
+        });
+        fileInput.addEventListener('change', () => {
+          if (fileInput.files.length) handleFiles([...fileInput.files]);
+          fileInput.value = '';
+        });
+
+        async function handleFiles(files) {
+          const valid = files.filter(f => {
+            if (f.size > MAX_BYTES) {
+              alert('"'+f.name+'" terlalu besar (maks '+MAX_MB+'MB)');
+              return false;
+            }
+            return true;
+          });
+          if (!valid.length) return;
+          progress.style.display = 'block';
+          uploadBox.style.pointerEvents = 'none';
+          for (let i = 0; i < valid.length; i++) {
+            const file = valid[i];
+            progLabel.textContent = 'Mengupload '+(i+1)+'/'+valid.length+': '+file.name;
+            progFill.style.width = Math.round((i/valid.length)*100)+'%';
+            try {
+              const dataUrl = await readFileB64(file);
+              const id = C.uid();
+              await C.put(PATH+'/'+id, {
+                id,
+                name: file.name.replace(/\.[^.]+$/,''),
+                ket: '',
+                mime: file.type || 'application/octet-stream',
+                uploader: myName(),
+                ts: Date.now(),
+                order: Date.now() + i,
+                data: dataUrl
+              });
+            } catch(err) {
+              alert('Gagal upload: '+file.name+'\n'+err.message);
+            }
+          }
+          progFill.style.width = '100%';
+          progLabel.textContent = '✅ '+valid.length+' file berhasil diupload!';
+          setTimeout(() => { progress.style.display='none'; progFill.style.width='0%'; }, 2500);
+          uploadBox.style.pointerEvents = '';
+        }
+
+        root.addEventListener('pp-unmount', () => { if (stopWatch) stopWatch(); });
+      }
+    };
+  };
+
+})();
+</script>
 <script src="js/lomba.js"></script>
 <script src="js/jsetup.js"></script>
 <script src="js/flip_data.js"></script>
