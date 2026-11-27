@@ -812,10 +812,53 @@
    ========================================================= */
 (function () {
   'use strict';
-  const PATH = 'presentasi';
-  const MAX_MB = 5;                          // batas aman untuk Firebase RTDB base64
+
+  /* ── Firebase langsung — tidak lewat PPCloud/PPNet ── */
+  const FB = window.PP_FIREBASE || {};
+  const FB_URL  = (FB.databaseURL || '').replace(/\/+$/, '');
+  const FB_ROOT = FB.root || 'pythagoras';
+  const MAX_MB   = 5;
   const MAX_BYTES = MAX_MB * 1024 * 1024;
-  const POLL_MS = 5000;
+  const POLL_MS  = 5000;
+  const FB_PATH  = `${FB_URL}/${FB_ROOT}/presentasi_kelas.json`;
+
+  async function fbGet() {
+    try {
+      const r = await fetch(FB_PATH + '?orderBy="ts"', { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } catch(e) { return null; }
+  }
+  async function fbPut(id, val) {
+    const url = FB_PATH.replace('.json', '') + `/${id}.json`;
+    const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(val) });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + await r.text());
+    return true;
+  }
+  async function fbPatch(id, val) {
+    const url = FB_PATH.replace('.json', '') + `/${id}.json`;
+    const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(val) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return true;
+  }
+  async function fbDel(id) {
+    const url = FB_PATH.replace('.json', '') + `/${id}.json`;
+    const r = await fetch(url, { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return true;
+  }
+  function fbUid() { return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function fbWatch(cb, ms) {
+    let last = '\0', stop = false, busy = false;
+    async function tick() {
+      if (stop || busy) return; busy = true;
+      try { const v = await fbGet(); const s = JSON.stringify(v); if (s !== last) { last = s; if (!stop) cb(v); } } catch(e) {}
+      busy = false;
+    }
+    tick();
+    const t = setInterval(() => { if (!document.hidden) tick(); }, ms || POLL_MS);
+    return () => { stop = true; clearInterval(t); };
+  }
 
   /* ── Baca file sebagai base64 data URL ── */
   function readFileB64(file, onProgress) {
@@ -990,9 +1033,8 @@
       </div>`,
 
       mount(root) {
-        const C = window.PPCloud;
-        if (!C) {
-          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Koneksi Firebase tidak tersedia.</p>';
+        if (!FB_URL) {
+          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Firebase belum dikonfigurasi (firebase-config.js).</p>';
           root.querySelector('#presLoading').style.display = 'none';
           return;
         }
@@ -1097,11 +1139,13 @@
             btn.onclick = async () => {
               const id = btn.dataset.save;
               btn.textContent = '⏳'; btn.disabled = true;
-              await C.patch(PATH+'/'+id, {
-                name: root.querySelector('#pn_'+id)?.value.trim() || items[id]?.name || 'Tanpa judul',
-                ket:  root.querySelector('#pk_'+id)?.value.trim() || ''
-              });
-              btn.textContent = '✅';
+              try {
+                await fbPatch(id, {
+                  name: root.querySelector('#pn_'+id)?.value.trim() || items[id]?.name || 'Tanpa judul',
+                  ket:  root.querySelector('#pk_'+id)?.value.trim() || ''
+                });
+                btn.textContent = '✅';
+              } catch(e) { btn.textContent = '❌'; alert('Gagal simpan: '+e.message); }
               setTimeout(() => { btn.textContent='💾 Simpan'; btn.disabled=false; }, 1500);
               root.querySelector('#pf_'+id)?.classList.remove('open');
             };
@@ -1111,7 +1155,7 @@
               const id = btn.dataset.del;
               if (!confirm('Hapus "' + (data[id]?.name||'file ini') + '"?\nTidak bisa dibatalkan.')) return;
               btn.textContent = '⏳'; btn.disabled = true;
-              await C.del(PATH+'/'+id);
+              try { await fbDel(id); } catch(e) { btn.textContent='❌'; btn.disabled=false; alert('Gagal hapus: '+e.message); }
             };
           });
         }
@@ -1119,8 +1163,8 @@
         /* Slideshow dari tombol utama */
         btnSlide.onclick = () => bukaSlideshow(sorted, 0);
 
-        /* Watch real-time */
-        stopWatch = C.watch(PATH, data => { items = data || {}; render(items); }, POLL_MS);
+        /* Watch real-time — langsung ke Firebase */
+        stopWatch = fbWatch(data => { items = data || {}; render(items); }, POLL_MS);
 
         /* Upload */
         uploadBox.addEventListener('click', () => fileInput.click());
@@ -1154,9 +1198,9 @@
                 progFill.style.width = Math.round(((i + pct * 0.8) / valid.length) * 100) + '%';
               });
 
-              progLabel.textContent = 'Menyimpan ke database: '+file.name;
-              const id = C.uid();
-              await C.put(PATH+'/'+id, {
+              progLabel.textContent = 'Menyimpan ke Firebase: '+file.name;
+              const id = fbUid();
+              await fbPut(id, {
                 id,
                 name: file.name.replace(/\.[^.]+$/, ''),
                 ket: '',
@@ -1164,7 +1208,7 @@
                 uploader: myName(),
                 ts: Date.now(),
                 order: Date.now() + i,
-                url: dataUrl      // simpan sebagai data URL base64
+                url: dataUrl
               });
               progFill.style.width = Math.round(((i+1)/valid.length)*100)+'%';
             } catch(err) {
