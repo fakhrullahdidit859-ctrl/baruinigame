@@ -10,7 +10,7 @@
    - Pesan {type:'CACHE_ALL', urls:[...]} dari halaman = unduh semua aset untuk offline.
    Naikkan VERSION setiap kali kode/aset berubah agar cache lama diganti.
    ========================================================= */
-const VERSION = 'pp-v28';
+const VERSION = 'pp-v29';
 const CORE = CORE_LIST();
 function CORE_LIST() {
   return ['./', 'index.html', 'css/style.css', 'manifest.webmanifest', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
