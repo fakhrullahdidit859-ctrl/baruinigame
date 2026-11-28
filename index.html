@@ -817,14 +817,14 @@
   const FB = window.PP_FIREBASE || {};
   const FB_URL  = (FB.databaseURL || '').replace(/\/+$/, '');
   const FB_ROOT = FB.root || 'pythagoras';
-  const MAX_MB   = 5;
-  const MAX_BYTES = MAX_MB * 1024 * 1024;
+  const MAX_FOTO_MB   = 3;
+  const MAX_FOTO_BYTES = MAX_FOTO_MB * 1024 * 1024;
   const POLL_MS  = 5000;
   const FB_PATH  = `${FB_URL}/${FB_ROOT}/presentasi_kelas.json`;
 
   async function fbGet() {
     try {
-      const r = await fetch(FB_PATH + '?orderBy="ts"', { cache: 'no-store' });
+      const r = await fetch(FB_PATH, { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return await r.json();
     } catch(e) { return null; }
@@ -860,15 +860,29 @@
     return () => { stop = true; clearInterval(t); };
   }
 
-  /* ── Baca file sebagai base64 data URL ── */
-  function readFileB64(file, onProgress) {
+  /* ── Baca foto sebagai base64 ── */
+  function fotoToBase64(file, onProgress) {
     return new Promise((ok, fail) => {
       const fr = new FileReader();
       fr.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
-      fr.onload  = e => ok(e.target.result);
+      fr.onload = e => ok(e.target.result);
       fr.onerror = fail;
       fr.readAsDataURL(file);
     });
+  }
+
+  /* ── Parse URL video jadi embed ── */
+  function parseVideoUrl(raw) {
+    const url = raw.trim();
+    // YouTube
+    let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (m) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${m[1]}`, thumb: `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` };
+    // Google Drive
+    m = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    if (m) return { type: 'gdrive', embedUrl: `https://drive.google.com/file/d/${m[1]}/preview`, thumb: '' };
+    // Link langsung (mp4 dll)
+    if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: 'direct', embedUrl: url, thumb: '' };
+    return null;
   }
 
   function fileIcon(mime) {
@@ -954,79 +968,90 @@
     return {
       html: `<div class="wrap" style="max-width:860px;padding:0 8px 100px;">
 
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#1e3a8a,#7c3aed);color:#fff;border-radius:16px;padding:20px 24px;margin-bottom:16px;">
+        <div style="background:linear-gradient(135deg,#1e3a8a,#7c3aed);color:#fff;border-radius:16px;padding:20px 24px;margin-bottom:14px;">
           <h2 style="margin:0 0 4px;font-size:20px;">🎤 Presentasi Kelas</h2>
-          <p style="margin:0;font-size:13px;opacity:.85;">Upload foto, video, atau dokumen. Semua teman dan guru dapat melihat hasilnya secara real-time.</p>
+          <p style="margin:0;font-size:13px;opacity:.85;">Upload foto atau tambahkan link video YouTube/Google Drive — tampil di semua perangkat secara real-time.</p>
         </div>
 
-        <!-- Area Upload -->
-        <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:28px 20px;text-align:center;background:#f5f3ff;margin-bottom:12px;cursor:pointer;transition:background .2s;">
-          <div style="font-size:48px;line-height:1;margin-bottom:8px;">📤</div>
-          <b style="font-size:16px;color:#7c3aed;display:block;margin-bottom:4px;">Ketuk untuk upload file</b>
-          <span style="font-size:12px;color:#6b7280;">Foto, video, PDF, Word, Excel — maks. ${MAX_MB}MB per file</span>
-          <input type="file" id="presFileInput" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt" style="display:none;">
+        <!-- Tab pilih jenis -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button id="tabFoto" style="flex:1;padding:10px;border-radius:10px;border:2px solid #7c3aed;background:#7c3aed;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">🖼️ Upload Foto</button>
+          <button id="tabVideo" style="flex:1;padding:10px;border-radius:10px;border:2px solid #7c3aed;background:#fff;color:#7c3aed;font-weight:700;font-size:14px;cursor:pointer;">🎬 Tambah Video</button>
         </div>
 
-        <!-- Progress -->
-        <div id="presProgress" style="display:none;background:#ede9fe;border-radius:12px;padding:14px 18px;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:24px;height:24px;border:3px solid #7c3aed;border-top-color:transparent;border-radius:50%;animation:prespin .8s linear infinite;flex-shrink:0;"></div>
-            <div style="flex:1;">
-              <b id="presProgLabel" style="color:#7c3aed;font-size:14px;">Mengupload...</b>
-              <div style="height:6px;background:#ddd6fe;border-radius:4px;margin-top:4px;overflow:hidden;">
-                <div id="presProgFill" style="height:100%;background:#7c3aed;width:0%;transition:width .3s;border-radius:4px;"></div>
+        <!-- Panel Foto -->
+        <div id="panelFoto">
+          <div id="presUploadBox" style="border:3px dashed #7c3aed;border-radius:16px;padding:24px 20px;text-align:center;background:#f5f3ff;margin-bottom:10px;cursor:pointer;transition:background .2s;">
+            <div style="font-size:44px;line-height:1;margin-bottom:8px;">📷</div>
+            <b style="font-size:15px;color:#7c3aed;display:block;margin-bottom:4px;">Ketuk untuk pilih foto</b>
+            <span style="font-size:12px;color:#6b7280;">Format: JPG, PNG, GIF, WebP — maks. ${MAX_FOTO_MB}MB per foto · bisa pilih banyak</span>
+            <input type="file" id="presFileInput" multiple accept="image/*" style="display:none;">
+          </div>
+          <div id="presProgress" style="display:none;background:#ede9fe;border-radius:12px;padding:12px 16px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:22px;height:22px;border:3px solid #7c3aed;border-top-color:transparent;border-radius:50%;animation:prespin .8s linear infinite;flex-shrink:0;"></div>
+              <div style="flex:1;">
+                <b id="presProgLabel" style="color:#7c3aed;font-size:13px;">Memproses...</b>
+                <div style="height:5px;background:#ddd6fe;border-radius:4px;margin-top:4px;overflow:hidden;">
+                  <div id="presProgFill" style="height:100%;background:#7c3aed;width:0%;transition:width .3s;border-radius:4px;"></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Tombol Slideshow -->
-        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-          <button id="presBtnSlide" style="flex:1;min-width:140px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;">▶ Mulai Presentasi Layar Penuh</button>
+        <!-- Panel Video -->
+        <div id="panelVideo" style="display:none;">
+          <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:16px;margin-bottom:10px;">
+            <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#166534;">🔗 Tempel link video</p>
+            <input id="vidUrlInput" type="url" placeholder="https://www.youtube.com/watch?v=... atau Google Drive" style="width:100%;box-sizing:border-box;border:2px solid #86efac;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;margin-bottom:8px;">
+            <input id="vidNameInput" type="text" placeholder="Judul video (opsional)" style="width:100%;box-sizing:border-box;border:2px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;margin-bottom:10px;">
+            <button id="vidAddBtn" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">➕ Tambahkan Video</button>
+            <p style="margin:8px 0 0;font-size:11px;color:#6b7280;">Mendukung: YouTube, Google Drive, atau link MP4 langsung</p>
+          </div>
         </div>
 
-        <!-- Header daftar -->
+        <!-- Tombol slideshow -->
+        <button id="presBtnSlide" style="width:100%;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;">▶ Mulai Presentasi Layar Penuh</button>
+
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <h3 style="margin:0;font-size:16px;color:#1e293b;">📋 Semua File</h3>
+          <h3 style="margin:0;font-size:15px;color:#1e293b;">📋 Semua Konten</h3>
           <span id="presCount" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">Memuat...</span>
         </div>
 
-        <div id="presList" style="display:flex;flex-direction:column;gap:14px;"></div>
+        <div id="presList" style="display:flex;flex-direction:column;gap:12px;"></div>
         <div id="presLoading" style="text-align:center;padding:40px;color:#9ca3af;">
-          <div style="font-size:36px;">⏳</div>
-          <p style="margin:8px 0 0;">Memuat presentasi...</p>
+          <div style="font-size:36px;">⏳</div><p style="margin:8px 0 0;">Memuat...</p>
         </div>
 
         <style>
           @keyframes prespin { to { transform:rotate(360deg); } }
-          .pc { background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden;position:relative;transition:box-shadow .2s; }
-          .pc:hover { box-shadow:0 6px 24px rgba(0,0,0,.15); }
-          .pc-img { width:100%;max-height:420px;object-fit:contain;background:#0f172a;display:block; }
-          .pc-vid { width:100%;max-height:380px;background:#000;display:block; }
-          .pc-doc { width:100%;height:180px;background:linear-gradient(135deg,#1e3a8a,#312e81);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px; }
-          .pc-meta { padding:14px 16px; }
-          .pc-name { font-size:17px;font-weight:700;color:#1e293b;margin:0 0 4px; }
-          .pc-ket  { font-size:14px;color:#475569;margin:0 0 10px;line-height:1.5;white-space:pre-wrap; }
+          .pc { background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.09);overflow:hidden;position:relative; }
+          .pc-img { width:100%;max-height:380px;object-fit:contain;background:#0f172a;display:block;cursor:pointer; }
+          .pc-embed { width:100%;aspect-ratio:16/9;border:none;display:block;background:#000; }
+          .pc-meta { padding:12px 14px; }
+          .pc-name { font-size:15px;font-weight:700;color:#1e293b;margin:0 0 4px; }
+          .pc-ket  { font-size:13px;color:#475569;margin:0 0 8px;line-height:1.5;white-space:pre-wrap; }
           .pc-foot { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px; }
-          .pc-who  { font-size:12px;color:#94a3b8; }
+          .pc-who  { font-size:11px;color:#94a3b8; }
           .pc-acts { display:flex;gap:6px;flex-wrap:wrap; }
-          .pb { border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s; }
-          .pb:hover { opacity:.8; }
+          .pb { border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer; }
           .pb-edit   { background:#fef9c3;color:#854d0e; }
           .pb-del    { background:#fee2e2;color:#991b1b; }
           .pb-save   { background:#dcfce7;color:#166534; }
           .pb-cancel { background:#f1f5f9;color:#475569; }
           .pb-slide  { background:#ede9fe;color:#7c3aed; }
-          .pc-num { position:absolute;top:10px;left:10px;background:#7c3aed;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3); }
-          .pc-form { background:#f8fafc;border-top:2px solid #e2e8f0;padding:14px 16px;display:none; }
+          .pc-num { position:absolute;top:8px;left:8px;background:#7c3aed;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px; }
+          .pc-uplbl { position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;padding:2px 7px;font-size:10px; }
+          .pc-form { background:#f8fafc;border-top:2px solid #e2e8f0;padding:12px 14px;display:none; }
           .pc-form.open { display:block; }
-          .pc-inp { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;margin-bottom:8px; }
+          .pc-inp { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;margin-bottom:7px; }
           .pc-inp:focus { outline:none;border-color:#7c3aed; }
-          .pc-ta  { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;resize:vertical;min-height:70px;margin-bottom:8px; }
+          .pc-ta  { width:100%;box-sizing:border-box;border:2px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:7px; }
           .pc-ta:focus  { outline:none;border-color:#7c3aed; }
-          .pc-empty { text-align:center;padding:60px 20px;color:#9ca3af; }
-          .pc-uplbl { position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:3px 8px;font-size:11px; }
+          .pc-empty { text-align:center;padding:50px 20px;color:#9ca3af; }
+          .pc-badge-foto  { background:#ede9fe;color:#7c3aed;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700; }
+          .pc-badge-video { background:#fef3c7;color:#92400e;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700; }
         </style>
 
         <p style="text-align:right;color:#ccc;font-size:11px;margin-top:20px;">Made by Didit Fakhrullah</p>
@@ -1034,73 +1059,84 @@
 
       mount(root) {
         if (!FB_URL) {
-          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Firebase belum dikonfigurasi (firebase-config.js).</p>';
+          root.querySelector('#presList').innerHTML = '<p style="color:red;padding:20px;text-align:center;">⚠️ Firebase belum dikonfigurasi.</p>';
           root.querySelector('#presLoading').style.display = 'none';
           return;
         }
 
-        const uploadBox  = root.querySelector('#presUploadBox');
-        const fileInput  = root.querySelector('#presFileInput');
-        const progress   = root.querySelector('#presProgress');
-        const progLabel  = root.querySelector('#presProgLabel');
-        const progFill   = root.querySelector('#presProgFill');
-        const listEl     = root.querySelector('#presList');
-        const loadingEl  = root.querySelector('#presLoading');
-        const countEl    = root.querySelector('#presCount');
-        const btnSlide   = root.querySelector('#presBtnSlide');
+        const uploadBox = root.querySelector('#presUploadBox');
+        const fileInput = root.querySelector('#presFileInput');
+        const progress  = root.querySelector('#presProgress');
+        const progLabel = root.querySelector('#presProgLabel');
+        const progFill  = root.querySelector('#presProgFill');
+        const listEl    = root.querySelector('#presList');
+        const loadingEl = root.querySelector('#presLoading');
+        const countEl   = root.querySelector('#presCount');
+        const btnSlide  = root.querySelector('#presBtnSlide');
+        const tabFoto   = root.querySelector('#tabFoto');
+        const tabVideo  = root.querySelector('#tabVideo');
+        const panelFoto = root.querySelector('#panelFoto');
+        const panelVideo= root.querySelector('#panelVideo');
+        const vidUrl    = root.querySelector('#vidUrlInput');
+        const vidName   = root.querySelector('#vidNameInput');
+        const vidAddBtn = root.querySelector('#vidAddBtn');
 
-        let items = {};
-        let sorted = [];
-        let stopWatch = null;
+        let items = {}, sorted = [], stopWatch = null;
 
-        /* ── Render daftar ── */
+        /* Tab switching */
+        tabFoto.onclick = () => {
+          tabFoto.style.background='#7c3aed'; tabFoto.style.color='#fff';
+          tabVideo.style.background='#fff'; tabVideo.style.color='#7c3aed';
+          panelFoto.style.display=''; panelVideo.style.display='none';
+        };
+        tabVideo.onclick = () => {
+          tabVideo.style.background='#7c3aed'; tabVideo.style.color='#fff';
+          tabFoto.style.background='#fff'; tabFoto.style.color='#7c3aed';
+          panelFoto.style.display='none'; panelVideo.style.display='';
+        };
+
+        /* Render */
+        function renderPreview(item) {
+          const url = item.url || '';
+          if (item.type === 'video') {
+            const info = parseVideoUrl(url);
+            if (info && info.type === 'youtube') {
+              return `<iframe class="pc-embed" src="${info.embedUrl}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+            } else if (info && info.type === 'gdrive') {
+              return `<iframe class="pc-embed" src="${info.embedUrl}" allowfullscreen></iframe>`;
+            } else if (info && info.type === 'direct') {
+              return `<video src="${url}" class="pc-embed" controls preload="metadata"></video>`;
+            }
+            return `<div style="background:#1e293b;padding:20px;text-align:center;"><a href="${esc(url)}" target="_blank" style="color:#7c3aed;font-size:13px;">🔗 Buka link video</a></div>`;
+          }
+          if (url) return `<img src="${url}" class="pc-img" alt="${esc(item.name||'')}">`;
+          return `<div style="background:#1e293b;height:120px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">Tidak ada preview</div>`;
+        }
+
         function render(data) {
           loadingEl.style.display = 'none';
           if (!data || !Object.keys(data).length) {
-            listEl.innerHTML = `<div class="pc-empty"><div style="font-size:56px;">📭</div><b style="font-size:16px;display:block;margin:8px 0 4px;">Belum ada file</b><span style="font-size:13px;">Upload foto atau video untuk mulai presentasi!</span></div>`;
-            countEl.textContent = '0 file';
-            sorted = [];
-            return;
+            listEl.innerHTML = `<div class="pc-empty"><div style="font-size:52px;">📭</div><b style="font-size:15px;display:block;margin:8px 0 4px;">Belum ada konten</b><span style="font-size:13px;">Upload foto atau tambah link video!</span></div>`;
+            countEl.textContent = '0 item'; sorted = []; return;
           }
-
-          sorted = Object.entries(data).sort((a,b) => {
-            const oa = a[1].order != null ? a[1].order : (a[1].ts||0);
-            const ob = b[1].order != null ? b[1].order : (b[1].ts||0);
-            return oa - ob;
-          });
-
-          countEl.textContent = sorted.length + ' file';
+          sorted = Object.entries(data).sort((a,b) => (a[1].order||a[1].ts||0)-(b[1].order||b[1].ts||0));
+          countEl.textContent = sorted.length + ' item';
           listEl.innerHTML = '';
 
           sorted.forEach(([id, item], i) => {
-            const guru = isGuru();
-            const mine = item.uploader === myName() || guru;
-            const icon = fileIcon(item.mime);
-            const mime = item.mime || '';
-            const url  = item.url || item.data || '';
-            const ts   = item.ts ? new Date(item.ts).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-
-            let prev = '';
-            if (mime.startsWith('image/') && url) {
-              prev = `<div style="background:#0f172a;cursor:pointer;" data-slide="${i}"><img src="${url}" class="pc-img" alt="${esc(item.name||'')}"></div>`;
-            } else if (mime.startsWith('video/') && url) {
-              prev = `<div style="background:#000;"><video src="${url}" class="pc-vid" controls preload="metadata"></video></div>`;
-            } else if (mime.startsWith('audio/') && url) {
-              prev = `<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:28px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:12px;">🎵</div><audio src="${url}" controls style="width:100%;max-width:400px;"></audio></div>`;
-            } else if (url) {
-              prev = `<div class="pc-doc"><span style="font-size:60px;">${icon}</span><span style="color:#fff;font-size:13px;opacity:.8;">${esc(mime||'Dokumen')}</span><a href="${url}" target="_blank" style="margin-top:8px;background:#7c3aed;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;text-decoration:none;">⬇ Buka File</a></div>`;
-            } else {
-              prev = `<div class="pc-doc"><span style="font-size:60px;">${icon}</span><span style="color:#ff6b6b;font-size:13px;">File belum tersedia</span></div>`;
-            }
+            const mine = item.uploader === myName() || isGuru();
+            const ts = item.ts ? new Date(item.ts).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+            const badge = item.type === 'video'
+              ? `<span class="pc-badge-video">🎬 VIDEO</span>`
+              : `<span class="pc-badge-foto">🖼️ FOTO</span>`;
 
             const card = document.createElement('div');
-            card.className = 'pc';
-            card.dataset.id = id;
-            card.innerHTML = `${prev}
+            card.className = 'pc'; card.dataset.id = id;
+            card.innerHTML = `${renderPreview(item)}
               <div class="pc-num">${i+1}</div>
               <div class="pc-uplbl">${esc(item.uploader||'?')}</div>
               <div class="pc-meta">
-                <p class="pc-name">${icon} ${esc(item.name||'Tanpa judul')}</p>
+                <p class="pc-name">${badge} ${esc(item.name||'Tanpa judul')}</p>
                 <p class="pc-ket">${item.ket ? esc(item.ket) : '<span style="color:#94a3b8;font-style:italic;">Belum ada keterangan</span>'}</p>
                 <div class="pc-foot">
                   <span class="pc-who">📅 ${ts}</span>
@@ -1112,8 +1148,8 @@
                 </div>
               </div>
               <div class="pc-form" id="pf_${id}">
-                <input class="pc-inp" id="pn_${id}" value="${esc(item.name||'')}" placeholder="Judul file">
-                <textarea class="pc-ta" id="pk_${id}" placeholder="Keterangan / catatan...">${esc(item.ket||'')}</textarea>
+                <input class="pc-inp" id="pn_${id}" value="${esc(item.name||'')}" placeholder="Judul">
+                <textarea class="pc-ta" id="pk_${id}" placeholder="Keterangan...">${esc(item.ket||'')}</textarea>
                 <div style="display:flex;gap:8px;">
                   <button class="pb pb-save" data-save="${id}">💾 Simpan</button>
                   <button class="pb pb-cancel" data-cancel="${id}">Batal</button>
@@ -1122,12 +1158,11 @@
             listEl.appendChild(card);
           });
 
-          /* Events */
           listEl.querySelectorAll('[data-slidestart]').forEach(btn => {
             btn.onclick = () => bukaSlideshow(sorted, +btn.dataset.slidestart);
           });
-          listEl.querySelectorAll('[data-slide]').forEach(el => {
-            el.onclick = () => bukaSlideshow(sorted, +el.dataset.slide);
+          listEl.querySelectorAll('.pc-img[data-slide],.pc-img').forEach((el,i) => {
+            el.onclick = () => bukaSlideshow(sorted, i);
           });
           listEl.querySelectorAll('[data-edit]').forEach(btn => {
             btn.onclick = () => root.querySelector('#pf_'+btn.dataset.edit)?.classList.toggle('open');
@@ -1137,96 +1172,139 @@
           });
           listEl.querySelectorAll('[data-save]').forEach(btn => {
             btn.onclick = async () => {
-              const id = btn.dataset.save;
-              btn.textContent = '⏳'; btn.disabled = true;
+              const id = btn.dataset.save; btn.textContent='⏳'; btn.disabled=true;
               try {
-                await fbPatch(id, {
-                  name: root.querySelector('#pn_'+id)?.value.trim() || items[id]?.name || 'Tanpa judul',
-                  ket:  root.querySelector('#pk_'+id)?.value.trim() || ''
-                });
-                btn.textContent = '✅';
-              } catch(e) { btn.textContent = '❌'; alert('Gagal simpan: '+e.message); }
-              setTimeout(() => { btn.textContent='💾 Simpan'; btn.disabled=false; }, 1500);
+                await fbPatch(id, { name: root.querySelector('#pn_'+id)?.value.trim()||'Tanpa judul', ket: root.querySelector('#pk_'+id)?.value.trim()||'' });
+                btn.textContent='✅';
+              } catch(e) { btn.textContent='❌'; alert('Gagal: '+e.message); }
+              setTimeout(()=>{ btn.textContent='💾 Simpan'; btn.disabled=false; }, 1500);
               root.querySelector('#pf_'+id)?.classList.remove('open');
             };
           });
           listEl.querySelectorAll('[data-del]').forEach(btn => {
             btn.onclick = async () => {
               const id = btn.dataset.del;
-              if (!confirm('Hapus "' + (data[id]?.name||'file ini') + '"?\nTidak bisa dibatalkan.')) return;
-              btn.textContent = '⏳'; btn.disabled = true;
-              try { await fbDel(id); } catch(e) { btn.textContent='❌'; btn.disabled=false; alert('Gagal hapus: '+e.message); }
+              if (!confirm('Hapus "' + (data[id]?.name||'item ini') + '"?')) return;
+              btn.textContent='⏳'; btn.disabled=true;
+              try { await fbDel(id); } catch(e) { btn.textContent='❌'; btn.disabled=false; alert('Gagal: '+e.message); }
             };
           });
         }
 
-        /* Slideshow dari tombol utama */
         btnSlide.onclick = () => bukaSlideshow(sorted, 0);
+        stopWatch = fbWatch(data => { items = data||{}; render(items); }, POLL_MS);
 
-        /* Watch real-time — langsung ke Firebase */
-        stopWatch = fbWatch(data => { items = data || {}; render(items); }, POLL_MS);
-
-        /* Upload */
+        /* Upload foto */
         uploadBox.addEventListener('click', () => fileInput.click());
         uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.background='#ede9fe'; });
         uploadBox.addEventListener('dragleave', () => uploadBox.style.background='#f5f3ff');
-        uploadBox.addEventListener('drop', e => {
-          e.preventDefault(); uploadBox.style.background='#f5f3ff';
-          handleFiles([...e.dataTransfer.files]);
-        });
-        fileInput.addEventListener('change', () => {
-          if (fileInput.files.length) handleFiles([...fileInput.files]);
-          fileInput.value = '';
-        });
+        uploadBox.addEventListener('drop', e => { e.preventDefault(); uploadBox.style.background='#f5f3ff'; handleFotos([...e.dataTransfer.files]); });
+        fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFotos([...fileInput.files]); fileInput.value=''; });
 
-        async function handleFiles(files) {
+        async function handleFotos(files) {
           const valid = files.filter(f => {
-            if (f.size > MAX_BYTES) { alert('"'+f.name+'" terlalu besar (maks '+MAX_MB+'MB)'); return false; }
+            if (!f.type.startsWith('image/')) { alert('"'+f.name+'" bukan foto. Gunakan tab Video untuk video.'); return false; }
+            if (f.size > MAX_FOTO_BYTES) { alert('"'+f.name+'" terlalu besar (maks '+MAX_FOTO_MB+'MB). Kompres dulu ya.'); return false; }
             return true;
           });
           if (!valid.length) return;
-          progress.style.display = 'block';
-          uploadBox.style.pointerEvents = 'none';
-
-          for (let i = 0; i < valid.length; i++) {
+          progress.style.display='block'; uploadBox.style.pointerEvents='none';
+          for (let i=0; i<valid.length; i++) {
             const file = valid[i];
             progLabel.textContent = 'Memproses '+(i+1)+'/'+valid.length+': '+file.name;
             progFill.style.width = Math.round((i/valid.length)*50)+'%';
             try {
-              /* Baca sebagai base64 — pasti berhasil tanpa server apapun */
-              const dataUrl = await readFileB64(file, pct => {
-                progFill.style.width = Math.round(((i + pct * 0.8) / valid.length) * 100) + '%';
+              const dataUrl = await fotoToBase64(file, pct => {
+                progFill.style.width = Math.round(((i+pct*0.8)/valid.length)*100)+'%';
               });
-
-              progLabel.textContent = 'Menyimpan ke Firebase: '+file.name;
               const id = fbUid();
-              await fbPut(id, {
-                id,
-                name: file.name.replace(/\.[^.]+$/, ''),
-                ket: '',
-                mime: file.type || 'application/octet-stream',
-                uploader: myName(),
-                ts: Date.now(),
-                order: Date.now() + i,
-                url: dataUrl
-              });
+              await fbPut(id, { id, type:'foto', name:file.name.replace(/\.[^.]+$/,''), ket:'', mime:file.type, uploader:myName(), ts:Date.now(), order:Date.now()+i, url:dataUrl });
               progFill.style.width = Math.round(((i+1)/valid.length)*100)+'%';
-            } catch(err) {
-              alert('Gagal upload "'+file.name+'":\n'+err.message);
-            }
+            } catch(err) { alert('Gagal upload "'+file.name+'":\n'+err.message); }
           }
-
-          progLabel.textContent = '✅ Selesai! '+valid.length+' file tersimpan.';
-          setTimeout(() => { progress.style.display='none'; progFill.style.width='0%'; }, 3000);
-          uploadBox.style.pointerEvents = '';
+          progLabel.textContent = '✅ '+valid.length+' foto tersimpan!';
+          setTimeout(()=>{ progress.style.display='none'; progFill.style.width='0%'; }, 2500);
+          uploadBox.style.pointerEvents='';
         }
+
+        /* Tambah video */
+        vidAddBtn.onclick = async () => {
+          const raw = vidUrl.value.trim();
+          if (!raw) { alert('Masukkan link video dulu.'); vidUrl.focus(); return; }
+          const info = parseVideoUrl(raw);
+          if (!info) { alert('Link tidak dikenali.\nContoh YouTube: https://www.youtube.com/watch?v=xxxxx\nGoogle Drive: https://drive.google.com/file/d/xxxxx/view'); return; }
+          vidAddBtn.textContent='⏳'; vidAddBtn.disabled=true;
+          try {
+            const id = fbUid();
+            const nama = vidName.value.trim() || 'Video ' + new Date().toLocaleString('id-ID',{day:'numeric',month:'short'});
+            await fbPut(id, { id, type:'video', name:nama, ket:'', mime:'video/embed', uploader:myName(), ts:Date.now(), order:Date.now(), url:raw });
+            vidUrl.value=''; vidName.value='';
+            vidAddBtn.textContent='✅ Ditambahkan!';
+          } catch(e) { alert('Gagal: '+e.message); }
+          setTimeout(()=>{ vidAddBtn.textContent='➕ Tambahkan Video'; vidAddBtn.disabled=false; }, 2000);
+        };
 
         root.addEventListener('pp-unmount', () => { if (stopWatch) stopWatch(); });
       }
     };
   };
 
-  /* Slideshow bisa dipanggil dari luar (guru buka dari layar lain) */
+  /* Slideshow — support foto & video embed */
+  function bukaSlideshow(sorted, startIdx) {
+    if (!sorted || !sorted.length) { alert('Belum ada konten.'); return; }
+    let idx = typeof startIdx === 'number' ? startIdx : 0;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;';
+
+    function slide(i) {
+      const item = sorted[i][1];
+      const url  = item.url || '';
+      let media  = '';
+      if (item.type === 'video') {
+        const info = parseVideoUrl(url);
+        if (info && (info.type==='youtube'||info.type==='gdrive')) {
+          media = `<iframe src="${info.embedUrl}" style="width:100%;height:100%;border:none;" allow="autoplay;fullscreen" allowfullscreen></iframe>`;
+        } else if (info && info.type==='direct') {
+          media = `<video src="${url}" controls autoplay style="max-width:100%;max-height:100%;display:block;"></video>`;
+        } else {
+          media = `<div style="text-align:center;padding:40px;"><a href="${esc(url)}" target="_blank" style="color:#7c3aed;font-size:16px;">🔗 Buka link video</a></div>`;
+        }
+      } else if (url) {
+        media = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">`;
+      } else {
+        media = `<div style="color:#666;text-align:center;padding:40px;font-size:40px;">❌</div>`;
+      }
+
+      overlay.innerHTML = `
+        <div style="background:linear-gradient(90deg,#1e3a8a,#7c3aed);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;">
+          <div style="color:#fff;min-width:0;flex:1;">
+            <b style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${esc(item.name||'Tanpa judul')}</b>
+            <span style="font-size:11px;opacity:.7;">👤 ${esc(item.uploader||'')} · ${item.type==='video'?'🎬 Video':'🖼️ Foto'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span style="color:#fff;font-size:12px;opacity:.8;">${i+1}/${sorted.length}</span>
+            <button id="slPrev" style="background:rgba(255,255,255,.2);border:none;border-radius:7px;color:#fff;padding:5px 12px;font-size:16px;cursor:pointer;">◀</button>
+            <button id="slNext" style="background:rgba(255,255,255,.2);border:none;border-radius:7px;color:#fff;padding:5px 12px;font-size:16px;cursor:pointer;">▶</button>
+            <button id="slClose" style="background:#ef4444;border:none;border-radius:7px;color:#fff;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;">✕</button>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f172a;">${media}</div>
+        ${item.ket ? `<div style="background:#1e293b;color:#94a3b8;padding:8px 18px;font-size:12px;text-align:center;flex-shrink:0;">${esc(item.ket)}</div>` : ''}`;
+
+      overlay.querySelector('#slPrev').onclick = () => { idx=(idx-1+sorted.length)%sorted.length; slide(idx); };
+      overlay.querySelector('#slNext').onclick = () => { idx=(idx+1)%sorted.length; slide(idx); };
+      overlay.querySelector('#slClose').onclick = () => { document.removeEventListener('keydown',onKey); overlay.remove(); };
+    }
+    function onKey(e) {
+      if (e.key==='ArrowRight'||e.key==='ArrowDown') { idx=(idx+1)%sorted.length; slide(idx); }
+      if (e.key==='ArrowLeft' ||e.key==='ArrowUp')   { idx=(idx-1+sorted.length)%sorted.length; slide(idx); }
+      if (e.key==='Escape') { document.removeEventListener('keydown',onKey); overlay.remove(); }
+    }
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    slide(idx);
+  }
+
   PP.bukaSlideshow = bukaSlideshow;
 
 })();
