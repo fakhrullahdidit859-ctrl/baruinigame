@@ -13,6 +13,7 @@
    root        : nama folder induk di database (boleh dibiarkan).
    ========================================================= */
 window.PP_FIREBASE = {
+  apiKey: "AIzaSyA56Ov-sD99GXS6tA0iTcYy8iitUzKzMvQ",
   databaseURL: 'https://pythagorasgame123-default-rtdb.asia-southeast1.firebasedatabase.app',
   storageBucket: 'pythagorasgame123.appspot.com',  // untuk unggah video guru (opsional)
   root: 'pythagoras',
